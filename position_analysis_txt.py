@@ -30,6 +30,7 @@ class PurePositionAnalyzer:
     def __init__(self, csv_file):
         self.csv_file = csv_file
         self.df = None
+        self.last_date = None
         self.load_data()
     
     def load_data(self):
@@ -41,10 +42,10 @@ class PurePositionAnalyzer:
             names=['日期', '期號', '號1', '號2', '號3', '號4', '號5', 
                    '分隔', '排序1', '排序2', '排序3', '排序4', '排序5']
         )
-        self.df = self.df.iloc[:-2]
+        #self.df = self.df.iloc[:-1]
         self.df['日期'] = pd.to_datetime(self.df['日期'])
-        last_date = self.df['日期'].iloc[-2]
-        print(last_date)
+        self.last_date = self.df['日期'].iloc[-1]
+        print(self.last_date)
         print(f"✓ 載入 {len(self.df)} 期數據\n")
     
     def get_all_numbers(self, idx):
@@ -309,19 +310,29 @@ class PurePositionAnalyzer:
         print("="*80)
 
 def main():
-    # 設定日誌記錄
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    log_file = os.path.join(script_dir, 'analysis_log.txt')
-    sys.stdout = Logger(log_file)
-    
     csv_file = os.path.join(script_dir, 'tw539.csv')
     
-    # 門檻設定
+    # 從 CSV 檔名擷取前綴 (tw539 或 us539)
+    csv_basename = os.path.basename(csv_file)
+    csv_prefix = os.path.splitext(csv_basename)[0]  # 取得不含副檔名的檔名
+    
+    # 門檻設定 
     MIN_SINGLE = 3
     MIN_DOUBLE = 5
     MIN_TRIPLE = 10
     
     analyzer = PurePositionAnalyzer(csv_file)
+    
+    # 取得最後一筆資料日期並格式化
+    date_str = analyzer.last_date.strftime('%Y%m%d')
+    
+    # 組合輸出檔名
+    log_file = os.path.join(script_dir, f'{csv_prefix}_{date_str}開獎後.txt')
+    
+    # 設定日誌記錄
+    sys.stdout = Logger(log_file)
+    
     results = analyzer.analyze(days=3, min_single=MIN_SINGLE, min_double=MIN_DOUBLE, min_triple=MIN_TRIPLE)
     
     if results:
