@@ -80,7 +80,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "539分析報告 - ${{ steps.config.outputs.csv_file }}"
-          to: nicpyq520@gmail.com,ccupcpop@gmail.com
+          to: ccupcpop@gmail.com
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             539 彩票分析報告
@@ -96,6 +96,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add drag_output/*.txt position_output/*.txt
+          git add tw539.csv us539.csv drag_output/*.txt position_output/*.txt
           git diff --cached --quiet && echo "No changes to commit" || git commit -m "Auto update analysis results - ${{ steps.config.outputs.csv_file }} $(date -u +%Y%m%d_%H%M%S)"
           git push
