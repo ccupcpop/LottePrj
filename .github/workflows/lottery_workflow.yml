@@ -42,11 +42,24 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "csv_file=${{ github.event.inputs.csv_file }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event.schedule }}" = "30 13 * * *" ]; then
-            # 台灣晚上 9:30 → tw539
             echo "csv_file=tw539.csv" >> $GITHUB_OUTPUT
           elif [ "${{ github.event.schedule }}" = "0 4 * * *" ]; then
-            # 台灣中午 12:00 → us539
             echo "csv_file=us539.csv" >> $GITHUB_OUTPUT
+          fi
+
+          # 設定郵件標題
+          CSV="${{ github.event.inputs.csv_file }}"
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            if [ "${{ github.event.schedule }}" = "30 13 * * *" ]; then
+              CSV="tw539.csv"
+            else
+              CSV="us539.csv"
+            fi
+          fi
+          if [ "$CSV" = "tw539.csv" ]; then
+            echo "title=台彩539" >> $GITHUB_OUTPUT
+          else
+            echo "title=加州天天" >> $GITHUB_OUTPUT
           fi
 
       - name: Patch dragnumber.py with correct CSV
@@ -79,13 +92,11 @@ jobs:
           secure: true
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "539分析報告 - ${{ steps.config.outputs.csv_file }}"
-          to: ccupcpop@gmail.com
+          subject: "${{ steps.config.outputs.title }}分析報告"
+          to: ccupcpop@gmail.com,nicpyq520@gmail.com
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
-            539 彩票分析報告
-            
-            資料來源: ${{ steps.config.outputs.csv_file }}
+            ${{ steps.config.outputs.title }} 分析報告
             
             請查看附件。
           attachments: |
