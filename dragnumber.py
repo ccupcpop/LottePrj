@@ -2,6 +2,7 @@ import pandas as pd
 from collections import Counter
 from datetime import datetime
 import os
+import shutil
 
 def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max_occurrences=5, threshold=1, validate_position=False, trigger_count=7):
     """
@@ -238,12 +239,18 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
     for line in output_lines:
         print(line)
     
+    # 建立輸出目錄（先清空再建立）
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(csv_filename)) if os.path.dirname(csv_filename) else os.path.dirname(os.path.abspath(__file__)), 'drag_output')
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+    
     # 建立輸出檔名
     csv_basename = os.path.splitext(os.path.basename(csv_filename))[0]
     last_date = last_n.iloc[-1]['日期'].strftime('%Y%m%d')
     search_suffix = f"前{max_occurrences}次" if use_occurrence_limit else f"{days_back}筆"
     validate_suffix = "_驗證位置" if validate_position else ""
-    filename = f"{csv_basename}_{last_date}_號碼統計_{search_suffix}_門檻{threshold}{validate_suffix}.txt"
+    filename = os.path.join(output_dir, f"{csv_basename}_{last_date}_號碼統計_{search_suffix}_門檻{threshold}{validate_suffix}.txt")
     
     with open(filename, 'w', encoding='utf-8') as f:
         f.write('\n'.join(output_lines))

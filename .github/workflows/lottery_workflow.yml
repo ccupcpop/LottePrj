@@ -78,7 +78,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "539分析報告 - ${{ steps.config.outputs.csv_file }} (${{ github.event.schedule }})"
-          to: nicpyq520@gmail.com,ccupcpop@gmail.com
+          to: ccupcpop@gmail.com
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             539 彩票分析報告

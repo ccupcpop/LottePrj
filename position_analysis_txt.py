@@ -11,6 +11,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import os
 import sys
+import shutil
 from itertools import combinations
 
 class Logger:
@@ -327,8 +328,14 @@ def main():
     # 取得最後一筆資料日期並格式化
     date_str = analyzer.last_date.strftime('%Y%m%d')
     
+    # 建立輸出目錄（先清空再建立）
+    output_dir = os.path.join(script_dir, 'position_output')
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+    
     # 組合輸出檔名
-    log_file = os.path.join(script_dir, f'{csv_prefix}_{date_str}開獎後.txt')
+    log_file = os.path.join(output_dir, f'{csv_prefix}_{date_str}開獎後.txt')
     
     # 設定日誌記錄
     sys.stdout = Logger(log_file)
