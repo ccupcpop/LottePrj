@@ -1,0 +1,90 @@
+name: Lottery Analysis
+
+on:
+  schedule:
+    # 台灣時間晚上 9:30 (UTC 13:30)
+    - cron: '30 13 * * *'
+    # 台灣時間中午 12:00 (UTC 04:00)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      csv_file:
+        description: 'CSV file to use (tw539.csv or us539.csv)'
+        required: false
+        default: 'tw539.csv'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy
+
+      - name: Determine CSV file based on schedule
+        id: config
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "csv_file=${{ github.event.inputs.csv_file }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "30 13 * * *" ]; then
+            # 台灣晚上 9:30 → tw539
+            echo "csv_file=tw539.csv" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 4 * * *" ]; then
+            # 台灣中午 12:00 → us539
+            echo "csv_file=us539.csv" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Patch dragnumber.py with correct CSV
+        run: |
+          sed -i "s|CSV_FILENAME = '.*'|CSV_FILENAME = '${{ steps.config.outputs.csv_file }}'|" dragnumber.py
+
+      - name: Patch position_analysis_txt.py with correct CSV
+        run: |
+          CSV_NAME="${{ steps.config.outputs.csv_file }}"
+          sed -i "s|csv_file = os.path.join(script_dir, '.*')|csv_file = os.path.join(script_dir, '${CSV_NAME}')|" position_analysis_txt.py
+
+      - name: Run dragnumber.py
+        run: python dragnumber.py
+
+      - name: Run position_analysis_txt.py
+        run: python position_analysis_txt.py
+
+      - name: Collect output files
+        id: collect
+        run: |
+          mkdir -p output
+          cp *.txt output/ 2>/dev/null || true
+          # 列出產出的檔案
+          ls -la output/
+          # 把檔案列表存起來給後續步驟用
+          FILE_LIST=$(ls output/*.txt 2>/dev/null | tr '\n' ',')
+          echo "files=${FILE_LIST%,}" >> $GITHUB_OUTPUT
+
+      - name: Send email with results
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "539分析報告 - ${{ steps.config.outputs.csv_file }} (${{ github.event.schedule }})"
+          to: nicpyq520@gmail.com,ccupcpop@gmail.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            539 彩票分析報告
+            
+            資料來源: ${{ steps.config.outputs.csv_file }}
+            執行時間: ${{ github.event.schedule }}
+            
+            請查看附件。
+          attachments: output/*.txt
