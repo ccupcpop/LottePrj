@@ -16,6 +16,8 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -58,16 +60,12 @@ jobs:
       - name: Run position_analysis_txt.py
         run: python position_analysis_txt.py
 
-      - name: Collect output files
-        id: collect
+      - name: List output files
         run: |
-          mkdir -p output
-          cp *.txt output/ 2>/dev/null || true
-          # 列出產出的檔案
-          ls -la output/
-          # 把檔案列表存起來給後續步驟用
-          FILE_LIST=$(ls output/*.txt 2>/dev/null | tr '\n' ',')
-          echo "files=${FILE_LIST%,}" >> $GITHUB_OUTPUT
+          echo "=== drag_output ==="
+          ls -la drag_output/ 2>/dev/null || echo "(empty)"
+          echo "=== position_output ==="
+          ls -la position_output/ 2>/dev/null || echo "(empty)"
 
       - name: Send email with results
         uses: dawidd6/action-send-mail@v3
@@ -77,14 +75,23 @@ jobs:
           secure: true
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "539分析報告 - ${{ steps.config.outputs.csv_file }} (${{ github.event.schedule }})"
-          to: ccupcpop@gmail.com
+          subject: "539分析報告 - ${{ steps.config.outputs.csv_file }}"
+          to: nicpyq520@gmail.com,ccupcpop@gmail.com
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             539 彩票分析報告
             
             資料來源: ${{ steps.config.outputs.csv_file }}
-            執行時間: ${{ github.event.schedule }}
             
             請查看附件。
-          attachments: output/*.txt
+          attachments: |
+            drag_output/*.txt
+            position_output/*.txt
+
+      - name: Commit output files to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add drag_output/*.txt position_output/*.txt
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Auto update analysis results - ${{ steps.config.outputs.csv_file }} $(date -u +%Y%m%d_%H%M%S)"
+          git push
