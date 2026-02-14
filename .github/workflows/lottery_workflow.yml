@@ -9,9 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       csv_file:
-        description: 'CSV file to use (tw539.csv or us539.csv)'
-        required: false
+        description: 'CSV file to use'
+        required: true
         default: 'tw539.csv'
+        type: choice
+        options:
+          - tw539.csv
+          - us539.csv
 
 jobs:
   analyze:

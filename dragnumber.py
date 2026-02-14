@@ -3,6 +3,25 @@ from collections import Counter
 from datetime import datetime
 import os
 import shutil
+import urllib.request
+
+# CSV 下載對應表
+CSV_URLS = {
+    'tw539.csv': 'https://biga.com.tw/HISTORYDATA/tw539.csv',
+    'us539.csv': 'https://biga.com.tw/HISTORYDATA/us539.csv',
+}
+
+def download_csv(csv_filename):
+    """下載最新 CSV 覆蓋本地檔案"""
+    url = CSV_URLS.get(os.path.basename(csv_filename))
+    if not url:
+        print(f"⚠ 未知的 CSV 檔案: {csv_filename}，跳過下載")
+        return
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    local_path = os.path.join(script_dir, os.path.basename(csv_filename))
+    print(f"下載 {url} ...")
+    urllib.request.urlretrieve(url, local_path)
+    print(f"✓ 已下載: {local_path}")
 
 def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max_occurrences=5, threshold=1, validate_position=False, trigger_count=7):
     """
@@ -267,6 +286,9 @@ def main():
     THRESHOLD = 1  # 顯示門檻值，只顯示出現次數大於此值的號碼
     VALIDATE_POSITION = False  # True=驗證號碼位置，False=不驗證
     TRIGGER_COUNT = 3  # 取最後幾筆作為觸發條件
+    
+    # 下載最新 CSV
+    download_csv(CSV_FILENAME)
     
     # 執行分析
     analyze_lottery(

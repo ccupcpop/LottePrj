@@ -12,7 +12,25 @@ from datetime import datetime, timedelta
 import os
 import sys
 import shutil
+import urllib.request
 from itertools import combinations
+
+# CSV 下載對應表
+CSV_URLS = {
+    'tw539.csv': 'https://biga.com.tw/HISTORYDATA/tw539.csv',
+    'us539.csv': 'https://biga.com.tw/HISTORYDATA/us539.csv',
+}
+
+def download_csv(csv_filepath):
+    """下載最新 CSV 覆蓋本地檔案"""
+    basename = os.path.basename(csv_filepath)
+    url = CSV_URLS.get(basename)
+    if not url:
+        print(f"⚠ 未知的 CSV 檔案: {basename}，跳過下載")
+        return
+    print(f"下載 {url} ...")
+    urllib.request.urlretrieve(url, csv_filepath)
+    print(f"✓ 已下載: {csv_filepath}")
 
 class Logger:
     def __init__(self, filename):
@@ -317,6 +335,9 @@ def main():
     # 從 CSV 檔名擷取前綴 (tw539 或 us539)
     csv_basename = os.path.basename(csv_file)
     csv_prefix = os.path.splitext(csv_basename)[0]  # 取得不含副檔名的檔名
+    
+    # 下載最新 CSV
+    download_csv(csv_file)
     
     # 門檻設定 
     MIN_SINGLE = 3
