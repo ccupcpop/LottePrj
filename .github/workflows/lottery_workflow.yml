@@ -16,6 +16,11 @@ on:
         options:
           - tw539.csv
           - us539.csv
+      test_mode:
+        description: '測試用'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   analyze:
@@ -62,6 +67,13 @@ jobs:
             echo "title=加州天天" >> $GITHUB_OUTPUT
           fi
 
+          # 設定收件人
+          if [ "${{ github.event.inputs.test_mode }}" = "true" ]; then
+            echo "recipients=ccupcpop@gmail.com" >> $GITHUB_OUTPUT
+          else
+            echo "recipients=ccupcpop@gmail.com,nicpyq520@gmail.com" >> $GITHUB_OUTPUT
+          fi
+
       - name: Patch dragnumber.py with correct CSV
         run: |
           sed -i "s|CSV_FILENAME = '.*'|CSV_FILENAME = '${{ steps.config.outputs.csv_file }}'|" dragnumber.py
@@ -93,7 +105,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "${{ steps.config.outputs.title }}分析報告"
-          to: ccupcpop@gmail.com,nicpyq520@gmail.com
+          to: ${{ steps.config.outputs.recipients }}
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             ${{ steps.config.outputs.title }} 分析報告
