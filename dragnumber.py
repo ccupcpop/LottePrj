@@ -131,17 +131,29 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
                 # 確保下N期存在（往後數N筆資料）
                 if i + periods_ahead >= len(df):
                     continue
-                    
-                current_num = int(df.loc[i, f'排序{pos}'])
                 
-                # 如果啟用位置驗證，檢查搜尋到的號碼是否也在有效區間內
+                # 檢查號碼是否匹配
                 if validate_position:
+                    # 驗證位置：只看該排序位置的號碼
+                    current_num = int(df.loc[i, f'排序{pos}'])
+                    
+                    # 檢查號碼是否在有效區間內
                     min_val, max_val = position_ranges[pos]
                     if not (min_val <= current_num <= max_val):
                         continue
+                    
+                    # 如果排序位置的號碼匹配
+                    if current_num == trigger_num:
+                        is_match = True
+                    else:
+                        is_match = False
+                else:
+                    # 不驗證位置：只要5個號碼中有出現就算
+                    current_nums = [int(df.loc[i, f'排序{j}']) for j in range(1, 6)]
+                    is_match = trigger_num in current_nums
                 
                 # 如果排序位置的號碼匹配
-                if current_num == trigger_num:
+                if is_match:
                     # 如果使用出現次數限制，檢查是否已達上限
                     if use_occurrence_limit and occurrence_count >= max_occurrences:
                         break
