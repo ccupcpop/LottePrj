@@ -47,6 +47,12 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
     df['日期'] = pd.to_datetime(df['日期'])
     df = df.sort_values('日期').reset_index(drop=True)
     #df = df.iloc[:-1]
+    
+    # 根據是否驗證位置來決定匹配次數
+    actual_max_occurrences = 6 if validate_position else 6
+    if use_occurrence_limit:
+        max_occurrences = actual_max_occurrences
+    
     # 定義位置區間
     position_ranges = {
         1: (1, 8),
@@ -64,8 +70,7 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
     output_lines = []
     
     # 全局統計用
-    global_tail_counter = Counter()
-    global_number_counter = Counter()  # 全局號碼統計
+    global_qualified_numbers = set()  # 收集所有出現次數>2的號碼
     
     header = "=" * 80
     output_lines.append(header)
@@ -81,6 +86,7 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
     
     validation_text = "啟用位置驗證 (排序1:1-8, 排序2:9-16, 排序3:17-24, 排序4:25-32, 排序5:33-39)" if validate_position else "不驗證位置"
     output_lines.append(f"資料有效性檢查: {validation_text}")
+    output_lines.append(f"匹配次數: {actual_max_occurrences}次")
     output_lines.append("")
     
     # 對每個觸發條件進行分析（從最後1筆開始）
@@ -89,7 +95,7 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
         trigger_global_idx = last_n_indices[trigger_idx]  # 獲取在完整df中的真實index
         periods_ahead = trigger_count - trigger_idx  # 最後1筆找下1期，倒數第2筆找下2期...
         
-        search_method = f"前{max_occurrences}次出現" if use_occurrence_limit else f"過去{days_back}筆"
+        search_method = f"前{actual_max_occurrences}次出現" if use_occurrence_limit else f"過去{days_back}筆"
         
         output_lines.append(header)
         output_lines.append(f"觸發條件 #{trigger_count-trigger_idx} (倒數第{trigger_count-trigger_idx}筆)")
@@ -155,7 +161,7 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
                 # 如果排序位置的號碼匹配
                 if is_match:
                     # 如果使用出現次數限制，檢查是否已達上限
-                    if use_occurrence_limit and occurrence_count >= max_occurrences:
+                    if use_occurrence_limit and occurrence_count >= actual_max_occurrences:
                         break
                     
                     match_count += 1
@@ -204,64 +210,29 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
                     bar = '█' * min(count, 30)
                     line = f"  號碼 {num:2d}: {count:3d} 次  {bar}"
                     output_lines.append(line)
-                    global_number_counter[num] += count  # 加到全局號碼統計
+                    # 如果次數>2，加入全局符合條件的號碼集合
+                    if count > 2:
+                        global_qualified_numbers.add(num)
             
             if not filtered_nums:
                 output_lines.append(f"  (沒有號碼出現次數 > {threshold})")
-            else:
-                # 統計尾數
-                tail_counter = Counter()
-                for num, count in filtered_nums:
-                    tail = num % 10
-                    tail_counter[tail] += count
-                    global_tail_counter[tail] += count  # 加到全局統計
-                
-                output_lines.append(f"\n尾數統計 (基於上述 >{threshold} 的號碼)：")
-                output_lines.append("-" * 80)
-                
-                # 按尾數排序（0-9）
-                for tail in range(10):
-                    count = tail_counter.get(tail, 0)
-                    if count > 0:
-                        bar = '█' * min(count, 30)
-                        line = f"  {tail}尾: {count:3d} 次  {bar}"
-                        output_lines.append(line)
+        
         
         output_lines.append("\n")
     
-    # 全局號碼統計總結
+    # 全局號碼統計總結 - 列出所有出現次數>2的號碼
     output_lines.append(header)
-    output_lines.append("全局號碼統計總結 (所有觸發條件加總，僅顯示 >門檻值 的號碼)")
+    output_lines.append("全局號碼統計總結 (所有排序位置中出現次數 >2 的號碼)")
     output_lines.append(header)
     output_lines.append("")
     
-    if global_number_counter:
-        # 按次數降序排列
-        sorted_numbers = sorted(global_number_counter.items(), key=lambda x: (-x[1], x[0]))
-        for num, count in sorted_numbers:
-            bar = '█' * min(count, 50)
-            line = f"  號碼 {num:2d}: {count:4d} 次  {bar}"
-            output_lines.append(line)
+    if global_qualified_numbers:
+        # 按號碼排序
+        sorted_numbers = sorted(global_qualified_numbers)
+        numbers_str = ', '.join([f"{num:02d}" for num in sorted_numbers])
+        output_lines.append(f"  符合條件的號碼: {numbers_str}")
     else:
-        output_lines.append("  (沒有數據)")
-    
-    output_lines.append("")
-    
-    # 全局尾數統計總結
-    output_lines.append(header)
-    output_lines.append("全局尾數統計總結 (所有觸發條件加總)")
-    output_lines.append(header)
-    output_lines.append("")
-    
-    if global_tail_counter:
-        # 按次數降序排列
-        sorted_tails = sorted(global_tail_counter.items(), key=lambda x: (-x[1], x[0]))
-        for tail, count in sorted_tails:
-            bar = '█' * min(count, 50)
-            line = f"  {tail}尾: {count:4d} 次  {bar}"
-            output_lines.append(line)
-    else:
-        output_lines.append("  (沒有數據)")
+        output_lines.append("  (沒有符合條件的號碼)")
     
     output_lines.append("")
     output_lines.append(header)
@@ -279,7 +250,7 @@ def analyze_lottery(csv_filename, days_back=120, use_occurrence_limit=False, max
     # 建立輸出檔名
     csv_basename = os.path.splitext(os.path.basename(csv_filename))[0]
     last_date = last_n.iloc[-1]['日期'].strftime('%Y%m%d')
-    search_suffix = f"前{max_occurrences}次" if use_occurrence_limit else f"{days_back}筆"
+    search_suffix = f"前{actual_max_occurrences}次" if use_occurrence_limit else f"{days_back}筆"
     validate_suffix = "_驗證位置" if validate_position else ""
     filename = os.path.join(output_dir, f"{csv_basename}_{last_date}_號碼統計_{search_suffix}_門檻{threshold}{validate_suffix}.txt")
     
@@ -294,9 +265,9 @@ def main():
     CSV_FILENAME = 'tw539.csv'  # CSV檔案名稱
     DAYS_BACK = 30  # 往前搜尋的期數
     USE_OCCURRENCE_LIMIT = True  # True=只統計前N次出現，False=統計天數內所有
-    MAX_OCCURRENCES = 6  # 當USE_OCCURRENCE_LIMIT=True時，限制統計的出現次數
+    MAX_OCCURRENCES = 6  # 當USE_OCCURRENCE_LIMIT=True時，限制統計的出現次數(會被validate_position覆蓋)
     THRESHOLD = 1  # 顯示門檻值，只顯示出現次數大於此值的號碼
-    VALIDATE_POSITION = False  # True=驗證號碼位置，False=不驗證
+    VALIDATE_POSITION = False  # True=驗證號碼位置(找6次)，False=不驗證(找4次)
     TRIGGER_COUNT = 3  # 取最後幾筆作為觸發條件
     
     # 下載最新 CSV
