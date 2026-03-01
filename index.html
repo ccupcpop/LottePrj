@@ -182,8 +182,7 @@
   <div class="app-title">🎰 台灣539</div>
   <button class="file-btn primary" id="btn539" onclick="document.getElementById('input539').click()">539</button>
   <input type="file" id="input539" accept=".csv" style="display:none" onchange="loadNamedCSV(this,'539','tw539.csv')">
-  <button class="file-btn" id="btnTiantian" onclick="document.getElementById('inputTiantian').click()">天天</button>
-  <input type="file" id="inputTiantian" accept=".csv" style="display:none" onchange="loadNamedCSV(this,'天天','us539.csv')">
+  <button class="file-btn" id="btnTiantian" onclick="fetchNamedCSV('us539.csv','天天')">天天</button>
   <div class="status-bar" id="statusBar">請選擇資料</div>
 </div>
 
@@ -285,7 +284,18 @@ document.addEventListener('drop', e => {
   if (f) parseCSVFile(f);
 });
 
-function loadNamedCSV(input, label, expectedName) {
+function fetchNamedCSV(filename, label) {
+  document.getElementById('btn539').classList.remove('primary');
+  document.getElementById('btnTiantian').classList.remove('primary');
+  document.getElementById('btnTiantian').classList.add('primary');
+  document.getElementById('statusBar').textContent = `載入 ${filename}...`;
+  fetch(filename)
+    .then(r => { if (!r.ok) throw new Error(`找不到 ${filename}`); return r.text(); })
+    .then(text => parseCSVText(text, label))
+    .catch(() => document.getElementById('statusBar').textContent = `❌ 找不到 ${filename}`);
+}
+
+
   if (!input.files[0]) return;
   // 切換按鈕顏色
   document.getElementById('btn539').classList.remove('primary');
@@ -1923,7 +1933,7 @@ function buildMissingContent() {
     const mvWeight = mv => mv > 10 ? '700' : '400';
 
     const isEven = (N - 1 - ri) % 2 === 0;
-    gridHtml += `<tr style="${isEven ? '' : 'background:var(--panel2)'}border-bottom:1px solid rgba(255,255,255,0.03)">
+    gridHtml += `<tr data-ri="${ri}" onclick="buildMissingText(${ri})" style="cursor:pointer;${isEven ? '' : 'background:var(--panel2);'}border-bottom:1px solid rgba(255,255,255,0.03)" class="missing-row">
       <td style="padding:2px 8px;color:var(--text-dim);border-right:1px solid var(--border);font-size:11px">${rec.date}</td>
       <td style="padding:2px 5px;text-align:center;color:var(--text-muted);border-right:1px solid var(--border)">星期${dow}</td>
       ${ballMV.map(mv => `<td style="padding:2px 8px;text-align:center;color:${mvColor(mv)};font-weight:${mvWeight(mv)}">${mv}</td>`).join('')}
@@ -1938,32 +1948,57 @@ function buildMissingContent() {
   document.getElementById('missingStatus').textContent =
     `顯示最近 ${showCount} 期 ｜ 當前基準: ${records[N-1].date}`;
 
-  // ── 右側：遺漏數文字分析 ──
-  // 以 currentMissing 為基準（interestedIndex 時刻，所有39球各自遺漏數）
-  // 對應 C# button2_Click：遍歷 i=0..99，每個 i 找出遺漏數==i 的球
-  const isNextDraw = interestedIndex >= records.length;
-  // 當前期開獎球（如果是下期開獎則無）
-  const drawnSet = (!isNextDraw && interestedIndex < records.length)
-    ? new Set(records[interestedIndex].nums) : new Set();
+  // 預設以 interestedIndex 為基準顯示下方分析
+  // targetRI = N-1 對應「下期開獎」（分析截至最新期）
+  buildMissingText(N - 1);
+}
+
+// ── 下方遺漏數文字分析（可獨立呼叫，對應 C# button2_Click）──
+// targetRI: 點選的 record index，分析「截至 targetRI 那期為止」各球遺漏狀況
+function buildMissingText(targetRI) {
+  const el = document.getElementById('missingText');
+  if (!el) return;
+
+  // 高亮選中列
+  document.querySelectorAll('.missing-row').forEach(r => r.style.outline = '');
+  const selRow = document.querySelector(`.missing-row[data-ri="${targetRI}"]`);
+  if (selRow) selRow.style.outline = '1px solid var(--accent2)';
+
+  // targetRI 的下一期 = targetRI+1 時刻的遺漏狀況
+  // 對應 C# button2_Click：target_index 那列的 elowValue
+  // 計算截至 targetRI（含）的各球遺漏數
+  const N2 = targetRI + 1; // 用前 N2 筆計算
+  const lastSeen2 = new Int32Array(40).fill(-1);
+  for (let i = 0; i < N2; i++) {
+    for (const n of records[i].nums) if (n >= 1 && n <= 39) lastSeen2[n] = i;
+  }
+  const cm = new Int16Array(40); // currentMissing at targetRI
+  for (let b = 1; b <= 39; b++) {
+    cm[b] = lastSeen2[b] < 0 ? N2 : (N2 - lastSeen2[b] - 1);
+  }
+
+  // 點選的那期開獎球（用於標示 []）
+  const drawnSet = new Set(records[targetRI].nums);
+
+  // 判斷是否為「下期開獎」基準（targetRI = interestedIndex-1）
+  const isNextDraw = (targetRI + 1) >= interestedIndex;
 
   let textHtml = `<div style="display:flex;gap:0;height:100%">
     <div style="flex:1;overflow-y:auto;padding:6px 8px;border-right:1px solid var(--border)">
-      <div style="color:var(--accent2);font-weight:600;font-size:11px;margin-bottom:4px">遺漏數分析</div>`;
+      <div style="color:var(--accent2);font-weight:600;font-size:11px;margin-bottom:4px">遺漏數分析 <span style="color:var(--text-muted);font-weight:400">${records[targetRI].date}</span></div>`;
 
-  let count = 0;
-  let m_回頭牌數 = 0;
+  let count = 0, m_回頭牌數 = 0;
   const 生牌群 = [];
 
   for (let i = 0; i <= 60; i++) {
     const balls = [];
     for (let b = 1; b <= 39; b++) {
-      if (currentMissing[b] === i) balls.push(b);
+      if (cm[b] === i) balls.push(b);
     }
     if (balls.length === 0) continue;
 
     const ballsHtml = balls.map(b => {
-      const isDrawn = drawnSet.has(b);
-      return isDrawn
+      return drawnSet.has(b)
         ? `<span style="color:var(--gold);font-weight:700">[${b}]</span>`
         : `<span style="color:var(--text)">${b}</span>`;
     }).join(' ,');
@@ -1977,13 +2012,10 @@ function buildMissingContent() {
     for (const b of balls) if (i > 10) 生牌群.push(b);
 
     if (i === 5) {
-      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--accent2);font-size:10px;font-weight:600">
-        ── 回頭牌 ${m_回頭牌數} 支 ──</div>`;
+      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--accent2);font-size:10px;font-weight:600">── 回頭牌 ${m_回頭牌數} 支 ──</div>`;
     }
     if (i === 10) {
-      const remaining = 39 - count;
-      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--gold);font-size:10px;font-weight:600">
-        ── 生牌=剩下 ${remaining} 支 ──</div>`;
+      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--gold);font-size:10px;font-weight:600">── 生牌=剩下 ${39 - count} 支 ──</div>`;
     }
   }
 
@@ -1995,21 +2027,19 @@ function buildMissingContent() {
         <div style="color:var(--text);line-height:1.7">${生牌群.map(b=>String(b).padStart(2,'0')).join(' ,')}</div>
       </div>`;
 
-  // 週報
-  textHtml += `<div style="display:flex;gap:4px">`;
-
-  // 計算週範圍 (對應 C# isNextDraw 邏輯)
-  const baseRec = records[N-1];
-  const baseDate = new Date(baseRec.date.replace(/\//g,'-'));
+  // 週報：以 targetRI 那期日期為基準
+  const baseDate = new Date(records[targetRI].date.replace(/\//g,'-'));
   let lastSundayDate;
+  // 下期開獎（targetRI 是最後一筆）：baseDate 當天若是日則取自身，否則往前找
   if (isNextDraw) {
-    const dow2 = baseDate.getDay(); // 0=Sun
-    if (dow2 === 0) lastSundayDate = new Date(baseDate);
-    else { lastSundayDate = new Date(baseDate); lastSundayDate.setDate(lastSundayDate.getDate() - dow2); }
+    const dow2 = baseDate.getDay();
+    lastSundayDate = new Date(baseDate);
+    if (dow2 !== 0) lastSundayDate.setDate(lastSundayDate.getDate() - dow2);
   } else {
     let diff = baseDate.getDay();
     if (diff === 0) diff = 7;
-    lastSundayDate = new Date(baseDate); lastSundayDate.setDate(lastSundayDate.getDate() - diff);
+    lastSundayDate = new Date(baseDate);
+    lastSundayDate.setDate(lastSundayDate.getDate() - diff);
   }
   const lwMon = new Date(lastSundayDate); lwMon.setDate(lwMon.getDate()-6);
   const twMon = new Date(lastSundayDate); twMon.setDate(twMon.getDate()+1);
@@ -2017,17 +2047,17 @@ function buildMissingContent() {
 
   const lwFlags = new Array(40).fill(false);
   const twFlags = new Array(40).fill(false);
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < N2; i++) {
     const d = new Date(records[i].date.replace(/\//g,'-'));
     if (d >= lwMon && d <= lastSundayDate) for (const n of records[i].nums) if (n>=1&&n<=39) lwFlags[n]=true;
-    if (d >= twMon && d <= twEnd) for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
+    if (d >= twMon && d <= twEnd)          for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
   }
+  textHtml += `<div style="display:flex;gap:4px">`;
   textHtml += `<div style="flex:1">` + genWeekReport(lwFlags, '上週開獎號') + `</div>`;
   textHtml += `<div style="flex:1">` + genWeekReport(twFlags, '本週開獎號') + `</div>`;
   textHtml += `</div></div></div>`;
 
-  document.getElementById('missingText').innerHTML = textHtml;
-}
+  el.innerHTML = textHtml;
 
 // ============================================================
 // FULL CALC TRIGGER
