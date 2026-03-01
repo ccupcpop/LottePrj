@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台灣539 v8.3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0d0f14; --panel: #13161e; --panel2: #1a1e28; --border: #252b3b;
+    --accent: #3a7bd5; --accent2: #00c2a8; --gold: #e8a020; --red: #e05252;
+    --green: #48bb78; --text: #d0d5e8; --text-muted: #606880; --text-dim: #8890a8;
+    --highlight-row: #1e2535; --selected-row: #1a2a45; --ball-bg: #222840;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100%; overflow: hidden; touch-action: manipulation;
+  }
+  .app-root { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+
+  /* Header */
+  .app-header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 0 10px; height: 46px;
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .app-title { font-family: 'JetBrains Mono',monospace; font-size:11px; color:var(--accent); font-weight:600; white-space:nowrap; }
+  .file-btn {
+    background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); padding: 0 12px; height: 32px; font-size: 12px;
+    cursor: pointer; border-radius: 6px; font-family: 'Noto Sans TC',sans-serif;
+    white-space: nowrap; display: flex; align-items: center; -webkit-appearance: none;
+  }
+  .file-btn:active { opacity: 0.7; }
+  .file-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sort-label {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-muted); cursor: pointer; height: 32px;
+  }
+  .sort-label input[type=checkbox] { width: 16px; height: 16px; }
+  .status-bar { margin-left: auto; font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono',monospace; white-space: nowrap; }
+
+  /* Main layout */
+  .main-layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+  /* Left panel - narrower for tablet */
+  .left-panel {
+    width: 38%; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border); background: var(--panel);
+  }
+  .panel-header {
+    background: var(--panel2); border-bottom: 1px solid var(--border);
+    padding: 0 8px; height: 34px;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .panel-title { color: var(--text); font-weight: 700; font-size: 12px; }
+  .table-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead { position: sticky; top: 0; z-index: 10; }
+  thead th {
+    background: var(--panel2); border-bottom: 1px solid var(--border);
+    padding: 4px 2px; color: var(--text-dim); font-size: 10px; text-align: center;
+  }
+  tbody tr { border-bottom: 1px solid rgba(37,43,59,0.4); cursor: pointer; height: 34px; }
+  tbody tr:active { background: var(--selected-row); }
+  tbody tr.selected { background: var(--selected-row) !important; }
+  tbody tr.next-draw td { color: var(--accent); font-weight: 700; background: #141a28; }
+  td { padding: 3px 2px; text-align: center; font-family: 'JetBrains Mono',monospace; font-size: 11px; }
+  td.seq { color: var(--text-muted); font-size: 10px; }
+  td.date-cell { font-family: 'Noto Sans TC',sans-serif; font-size: 10px; color: var(--text-dim); text-align: left; padding-left: 4px; }
+
+  .ball {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-size: 10px; font-weight: 600; cursor: pointer;
+    background: var(--ball-bg); color: var(--text); border: 1px solid var(--border);
+  }
+  .ball-1-10  { background: linear-gradient(135deg,#2d5a8e,#1a3a5c); border-color:#3a7bd5; color:#7ab8f5; }
+  .ball-11-20 { background: linear-gradient(135deg,#5a2d8e,#3a1a5c); border-color:#8b5cf6; color:#c4b5fd; }
+  .ball-21-30 { background: linear-gradient(135deg,#8e5a2d,#5c3a1a); border-color:#d97706; color:#fcd34d; }
+  .ball-31-39 { background: linear-gradient(135deg,#2d8e5a,#1a5c3a); border-color:#059669; color:#6ee7b7; }
+  .ball-out   { background: linear-gradient(135deg,#7a2020,#4a1010); border-color:#c02020; color:#f87070; }
+  .ball-selected { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+
+  /* Right panel */
+  .right-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Tab bar */
+  .tabs {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; flex-shrink: 0; height: 38px; overflow-x: auto; overflow-y: hidden;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; font-size: 12px; cursor: pointer;
+    color: var(--text-muted); border-bottom: 2px solid transparent;
+    white-space: nowrap; display: flex; align-items: center; flex-shrink: 0;
+  }
+  .tab:active { background: var(--panel2); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); font-weight: 600; }
+
+  /* Stats areas */
+  .stats-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .top-stats-wrap {
+    flex: 1; overflow-y: auto; padding: 8px 10px;
+    border-bottom: 1px solid var(--border); min-height: 0; -webkit-overflow-scrolling: touch;
+  }
+  .bottom-stats { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .bottom-controls {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 4px 10px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; height: 38px;
+  }
+  .bottom-controls select {
+    background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); padding: 3px 6px; font-size: 12px; border-radius: 6px;
+    cursor: pointer; height: 30px; -webkit-appearance: none;
+  }
+  .bottom-content { flex: 1; overflow-y: auto; padding: 8px 10px; -webkit-overflow-scrolling: touch; }
+
+  /* Components */
+  .section-title {
+    font-family: 'JetBrains Mono',monospace; font-size: 11px;
+    color: var(--accent2); padding: 4px 0 5px;
+    border-bottom: 1px solid var(--border); margin-bottom: 5px;
+  }
+  .pred-block { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; margin: 5px 0; }
+  .pred-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
+  .pred-label { color: var(--text-muted); font-size: 11px; min-width: 70px; font-family: 'JetBrains Mono',monospace; }
+  .pred-balls { display: flex; gap: 4px; flex-wrap: wrap; }
+  .pred-ball { background: var(--accent); color: #fff; padding: 2px 7px; border-radius: 4px; font-family: 'JetBrains Mono',monospace; font-size: 12px; font-weight: 600; }
+  .pred-ball.b { background: var(--accent2); color: #0d0f14; }
+  .bingo-cnt { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+  .bingo-cnt span { color: var(--green); font-weight: 700; }
+
+  .tail-grid { margin: 3px 0; }
+  .tail-row { display: flex; align-items: center; gap: 5px; padding: 3px 4px; border-radius: 4px; margin-bottom: 1px; min-height: 28px; }
+  .tail-row:active { background: var(--panel2); }
+  .tail-lbl { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-muted); min-width: 50px; }
+  .tail-occ { font-family: 'JetBrains Mono',monospace; font-size: 10px; color: var(--text-muted); margin-right: 2px; white-space: nowrap; }
+  .tail-items { display: flex; gap: 3px; flex-wrap: wrap; }
+  .tail-item { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-dim); padding: 2px 5px; border-radius: 3px; background: rgba(26,30,40,0.8); border: 1px solid transparent; }
+  .tail-item.hit { color: var(--gold); background: rgba(232,160,32,0.12); border-color: rgba(232,160,32,0.5); font-weight: 700; }
+
+  .info-line { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-muted); padding: 2px 0; line-height: 1.6; }
+  .info-line .hl { color: var(--green); font-weight: 700; }
+  .info-line .hl2 { color: var(--accent); }
+
+  .bignet-wrap { margin-top: 7px; background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; }
+  .bignet-title { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 5px; }
+  .bignet-balls { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; }
+  .net-ball { font-family: 'JetBrains Mono',monospace; font-size: 11px; padding: 3px 6px; border-radius: 3px; background: var(--panel); color: var(--text-dim); border: 1px solid var(--border); min-height: 26px; display:flex; align-items:center; }
+  .net-ball.hit { color: var(--gold); background: rgba(232,160,32,0.12); border-color: rgba(232,160,32,0.4); font-weight: 700; }
+  .net-ball.red { border-color: rgba(224,82,82,0.3); color: var(--red); }
+  .net-ball.red.hit { color: var(--gold); border-color: rgba(232,160,32,0.4); }
+  .last10-title { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--red); font-weight: 600; margin-bottom: 3px; margin-top: 5px; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 140px; color: var(--text-muted); gap: 8px; }
+  .empty-icon { font-size: 30px; opacity: 0.3; }
+  .empty-text { font-size: 12px; }
+
+  .drop-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(58,123,213,0.15); border: 3px dashed var(--accent);
+    z-index: 1000; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--accent); font-weight: 700; pointer-events: none;
+  }
+  .drop-overlay.visible { display: flex; }
+</style>
+</head>
+<body>
+<div class="app-root">
+<div class="drop-overlay" id="dropOverlay">放開以載入 CSV</div>
+
+<div class="app-header">
+  <div class="app-title">🎰 台灣539</div>
+  <button class="file-btn primary" onclick="fetchCSV('tw539.csv','539')">539</button>
+  <button class="file-btn" id="btnTiantian" onclick="fetchCSV('us539.csv','天天')">天天</button>
+  <div class="status-bar" id="statusBar">請載入 tw539.csv</div>
+</div>
+
+<div class="main-layout">
+  <div class="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">歷史紀錄</span>
+      <span id="rowCount" style="font-size:10px;color:var(--text-muted)"></span>
+    </div>
+    <div class="table-wrap" id="tableWrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:4px">日期</th>
+            <th>N1</th><th>N2</th><th>N3</th><th>N4</th><th>N5</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="6">
+            <div class="empty-state">
+              <div class="empty-icon">📂</div>
+              <div class="empty-text">拖曳或載入 CSV</div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="tabs">
+      <div class="tab active" id="tabBtn0" onclick="switchTab(0)">尾數</div>
+      <div class="tab" id="tabBtn1" onclick="switchTab(1)">傳統版路</div>
+      <div class="tab" id="tabBtn2" onclick="switchTab(2)">版路觀察</div>
+      <div class="tab" id="tabBtn3" onclick="switchTab(3)">遺漏表</div>
+    </div>
+
+    <div class="stats-area" id="tab0">
+      <div class="panel-header">
+        <span class="panel-title">尾數分析</span>
+        <button class="file-btn" onclick="runAllCalc()" style="height:26px;padding:0 10px;font-size:11px">計算</button>
+      </div>
+      <div class="top-stats-wrap" id="tailStatsTop">
+        <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">選擇歷史記錄進行分析</div></div>
+      </div>
+      <div class="bottom-stats">
+        <div class="bottom-controls">
+          <select id="nDraws" onchange="calcBallFreq()">
+            <option value="50">50期</option>
+            <option value="100" selected>100期</option>
+            <option value="150">150期</option>
+            <option value="200">200期</option>
+            <option value="300">300期</option>
+            <option value="500">500期</option>
+          </select>
+          <button class="file-btn" onclick="calcBallFreq()" style="height:28px;padding:0 10px;font-size:11px">號碼次數</button>
+        </div>
+        <div class="bottom-content" id="ballFreqContent">
+          <div class="empty-state" style="height:80px"><div class="empty-text" style="font-size:11px">選擇期數後計算</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-area" id="tab1" style="display:none;flex-direction:column;padding:0;overflow:hidden"></div>
+    <div class="stats-area" id="tab2" style="display:none;flex-direction:column;padding:0;overflow:hidden"></div>
+    <div class="stats-area" id="tab3" style="display:none;flex-direction:column;padding:0;overflow:hidden"></div>
+  </div>
+</div>
+</div>
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const DEFINE_SIZE   = 40; // balls 1..39
+const DEFINE_NUMBER = 5;
+const WEEK_CH = ['日','一','二','三','四','五','六'];
+
+// records[i] = { seq, date, nums[5] (original draw order), sortedNums[5] }
+// records[0] = OLDEST,  records[records.length-1] = NEWEST
+let records = [];
+
+// interestedIndex: the C# equivalent.
+// When user selects a row, interestedIndex = that record's index in records[].
+// Statistics use records[0 .. interestedIndex-1]  (NOT including interestedIndex itself)
+// When "下期開獎" is selected, interestedIndex = records.length (one past last)
+let interestedIndex = 0;
+let selectedDisplayRow = null;
+let selectedBall = null; // { ball, position, recordIndex } for 版路 // display row index (0=next-draw-placeholder, 1=latest, ...)
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('dropOverlay').classList.add('visible'); });
+document.addEventListener('dragleave', e => { if (e.clientX===0 && e.clientY===0) document.getElementById('dropOverlay').classList.remove('visible'); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('dropOverlay').classList.remove('visible');
+  const f = e.dataTransfer.files[0];
+  if (f) parseCSVFile(f);
+});
+
+function fetchCSV(filename, label) {
+  // Update active button style
+  document.querySelectorAll('.file-btn').forEach(b => b.classList.remove('primary'));
+  const btnMap = {'tw539.csv': 0, 'us539.csv': 1};
+  document.querySelectorAll('.file-btn')[btnMap[filename]]?.classList.add('primary');
+
+  document.getElementById('statusBar').textContent = `載入 ${filename}...`;
+  fetch(filename)
+    .then(r => { if (!r.ok) throw new Error(`找不到 ${filename}`); return r.text(); })
+    .then(text => parseCSVText(text, label))
+    .catch(err => {
+      document.getElementById('statusBar').textContent = `❌ ${err.message}`;
+    });
+}
+
+function loadCSV(input) {
+  if (input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => parseCSVText(e.target.result, input.files[0].name);
+    reader.readAsText(input.files[0], 'UTF-8');
+  }
+}
+
+function parseCSVText(text, label) {
+  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+    records = [];
+    for (const line of lines) {
+      const p = line.split(',');
+      if (p.length < 7) continue;
+      const date = p[0].trim();
+      const seq  = p[1].trim();
+      // CSV format: date, seq, b1..b5(original order), " ", s1..s5(sorted)
+      // C# uses SORTED columns (p[8..12]) for number[] — must match this
+      const numsOrig = [];
+      for (let i=2; i<=6; i++) {
+        const n = parseInt(p[i].trim());
+        if (isNaN(n)) break;
+        numsOrig.push(n);
+      }
+      if (numsOrig.length !== 5) continue;
+      // Use sorted columns (p[8..12]) if available, else sort original
+      const numsSorted = [];
+      if (p.length >= 13) {
+        for (let i=8; i<=12; i++) {
+          const n = parseInt(p[i].trim().replace(/"/g,''));
+          if (!isNaN(n)) numsSorted.push(n);
+        }
+      }
+      const nums = (numsSorted.length === 5) ? numsSorted : [...numsOrig].sort((a,b)=>a-b);
+      const sortedNums = nums;
+      records.push({ seq, date, nums, sortedNums, numsOrig });
+    }
+    document.getElementById('statusBar').textContent = `${label} ${records.length} 筆`;
+    document.getElementById('rowCount').textContent = `${records.length} 期`;
+    renderTable();
+    // Auto-select "下期開獎" = interestedIndex = records.length
+    selectByDisplayRow(0);
+}
+
+// ============================================================
+// TABLE RENDER
+// ============================================================
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">請載入 tw539.csv</div></div></td></tr>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+
+  // Row 0: 下期開獎 placeholder
+  const nextSeq = parseInt(records[records.length-1].seq) + 1;
+  const trNext = document.createElement('tr');
+  trNext.className = 'next-draw';
+  trNext.dataset.di = '0';
+  trNext.onclick = () => selectByDisplayRow(0);
+  trNext.innerHTML = `<td class="seq" style="color:var(--accent)">${nextSeq}</td>
+    <td class="date-cell" style="color:var(--accent);font-weight:700">下期開獎</td>
+    <td></td><td></td><td></td><td></td><td></td>`;
+  if (selectedDisplayRow === 0) trNext.classList.add('selected');
+  frag.appendChild(trNext);
+
+  // Rows 1+: newest first
+  for (let di = 1; di <= records.length; di++) {
+    const ri = records.length - di; // record index (newest first)
+    const rec = records[ri];
+    const date = new Date(rec.date.replace(/\//g, '-'));
+    const dow  = WEEK_CH[date.getDay()];
+    const displayNums = rec.sortedNums;
+    // 出球 = last in ORIGINAL order = nums[4]
+    // const outNum = rec.nums[4]; // removed
+
+    const tr = document.createElement('tr');
+    tr.dataset.di = di;
+    tr.onclick = () => selectByDisplayRow(di);
+    if (selectedDisplayRow === di) tr.classList.add('selected');
+
+    let ballsHTML = displayNums.map(n => {
+      let cls = 'ball';
+      if      (n <= 10) cls += ' ball-1-10';
+      else if (n <= 20) cls += ' ball-11-20';
+      else if (n <= 30) cls += ' ball-21-30';
+      else              cls += ' ball-31-39';
+      return `<td><span class="${cls}">${pad(n)}</span></td>`;
+    }).join('');
+
+    tr.innerHTML = `<td class="seq">${rec.seq}</td>
+      <td class="date-cell">${rec.date}-${dow}</td>
+      ${ballsHTML}`;
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function selectByDisplayRow(di) {
+  selectedDisplayRow = di;
+
+  // Update visual selection
+  document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected'));
+  const tr = document.querySelector(`#tableBody tr[data-di="${di}"]`);
+  if (tr) tr.classList.add('selected');
+
+  // Set interestedIndex:
+  // di=0 => "下期開獎" => interestedIndex = records.length
+  // di=1 => newest record => interestedIndex = records.length - 1
+  // di=k => interestedIndex = records.length - k
+  interestedIndex = records.length - di;  
+  // Note: when di=0, interestedIndex=records.length (one past end)
+  // Statistics use records[0..interestedIndex-1]
+  
+  // Reset version tab when period changes (selectedBall stays)
+  const tab1 = document.getElementById('tab1');
+  if (tab1) tab1._computed = false;
+
+  runAllCalc();
+}
+
+// ============================================================
+// HELPER: get numbers of record at index i (records[i].nums)
+// ============================================================
+function getRecord(i) { return records[i]; }
+
+// ============================================================
+// 統計拖尾 -- exact port of button13_Click else-branch
+// For each C(10,5) combo, 統計期數=10:
+//   winData[i]: for i=interestedIndex down to interestedIndex-30,
+//     count tail freq in [i-10..i-1], sort desc, check which of combo's tails hit draw i
+//   Front6Score = winData[1]*100000 + ... + winData[6]
+// Sort by Front6Score, top 50 vote → statisticsTailGroup sorted desc
+// A=top5, B=bottom5
+// ============================================================
+function calcStatisticsTail() {
+  if (interestedIndex < 35) return null;
+
+  const 統計期數 = 10;
+  const combos = [];
+  for (let a=0;a<6;a++) for(let b=a+1;b<7;b++) for(let c=b+1;c<8;c++) for(let d=c+1;d<9;d++) for(let e=d+1;e<10;e++)
+    combos.push([a,b,c,d,e]);
+
+  const m好好中Group = [];
+  for (const tails of combos) {
+    const filter = new Array(10).fill(false);
+    for (const t of tails) filter[t] = true;
+
+    const winData = [];
+    for (let i = interestedIndex; i >= interestedIndex - 30 && i >= 0; i--) {
+      // count tail freq in draws [i-統計期數 .. i-1]
+      const tc = Array.from({length:10}, (_,idx) => ({num:idx, val:0}));
+      for (let j = i-1; j > i-1-統計期數 && j >= 0; j--)
+        for (const n of records[j].nums) tc[n%10].val++;
+      // sort desc val, tie-break desc num
+      tc.sort((x,y) => y.val - x.val || y.num - x.num);
+
+      let 勝率 = 0;
+      if (i < interestedIndex && i >= 0) {
+        for (let j = 0; j < 10; j++) {
+          if (filter[j]) {
+            const tail = tc[j].num;
+            for (const n of records[i].nums)
+              if (n % 10 === tail) 勝率++;
+          }
+        }
+      }
+      winData.push(勝率);
+    }
+    const s = (winData[1]||0)*100000 + (winData[2]||0)*10000 + (winData[3]||0)*1000 + (winData[4]||0)*100 + (winData[5]||0)*10 + (winData[6]||0);
+    m好好中Group.push({ tails, filter, Front6Score: s });
+  }
+
+  m好好中Group.sort((a,b) => b.Front6Score - a.Front6Score);
+
+  const votes = new Array(10).fill(0);
+  for (let i = 0; i < Math.min(50, m好好中Group.length); i++)
+    for (let j = 0; j < 10; j++)
+      if (m好好中Group[i].filter[j]) votes[j]++;
+
+  // sorted desc by votes (keep rank order for theSame comparison)
+  const stg = Array.from({length:10}, (_,t) => ({t, v: votes[t]}));
+  stg.sort((a,b) => b.v - a.v);
+
+  const A_Group = stg.slice(0,5).map(x=>x.t).sort((a,b)=>a-b);
+  const B_Group = stg.slice(5,10).map(x=>x.t).sort((a,b)=>a-b);
+
+  let A_Bingo=0, B_Bingo=0;
+  if (interestedIndex < records.length)
+    for (const n of records[interestedIndex].nums) {
+      if (A_Group.includes(n%10)) A_Bingo++;
+      if (B_Group.includes(n%10)) B_Bingo++;
+    }
+
+  return { A_Group, B_Group, A_Bingo, B_Bingo,
+           statTop5: stg.slice(0,5).map(x=>x.t),
+           statBot5:  stg.slice(5,10).map(x=>x.t),
+           isPredict: interestedIndex >= records.length };
+}
+
+// ============================================================
+// 版路拖尾 - exact port of C# 單顆不定位拖牌 + 單顆定位拖牌
+// Called as: 單顆不定位拖牌(backStep=10, totalStep=100, threshold=2)
+//            單顆定位拖牌  (backStep=10, totalStep=100, threshold=2)
+//
+// For 不定位:
+//   fixGroup entries: for each draw i in [interestedIndex-10 .. interestedIndex-1],
+//     for each position j (0..4), for each nextTail (0..9):
+//       fix1.FirstValue = ball at position j of draw i
+//       fix1.Gap        = interestedIndex - i
+//       fix1.NextValue  = nextTail
+//
+//   For each entry, scan history h in [0 .. interestedIndex-Gap-1]:
+//     if ANY ball in draw h == FirstValue:
+//       check draw h+Gap: if any ball%10 == NextValue → success, record that ball
+//
+//   Count consecutive successes from the END (most recent) of possible[]:
+//   continueWin = streak of successes from the end
+//   Also accumulate possibleNum[ball/10] for each success in the streak
+//
+//   if continueWin > threshold(2):
+//     strTail[NextValue].possibleNum[item] += possibleNum[item]
+//     strTail[NextValue].Value++
+//
+// For 定位: same but requires position to also match (rec_h.nums[pos] == ballVal)
+//
+// possibleNum index mapping (DEFINE_NUMBER-1 = 4 slots, index 0..3):
+//   possibleNum[ball / 10]  → ball=1→0, ball=10→1, ball=11→1, ball=20→2, ball=30→3
+//   For tail=0: balls are 10,20,30 → indices 1,2,3
+//   For tail t>0: balls are t, 10+t, 20+t, 30+t → indices 0,1,2,3
+//
+// After both passes, build finalTailGroup:
+//   for j=1..39: group=j%10, item=j/10
+//   finalTailGroup[group] gets {num:j, value: hrtg[group].possibleNum[item]}
+//   sort each group by value desc (tie-break: num desc)
+// ============================================================
+function calcVersionTail() {
+  if (interestedIndex < 15) return null;
+
+  const backStep = 10;
+  const threshold = 2;
+
+  // hrtg[tail]: { Value, possibleNum[4] }
+  const hrtg = [];
+  for (let t=0; t<10; t++) hrtg.push({ Value:0, possibleNum:[0,0,0,0] });
+
+  function runPass(positionFixed) {
+    for (let i = interestedIndex - backStep; i < interestedIndex; i++) {
+      if (i < 0) continue;
+      const gap = interestedIndex - i; // 1..10
+
+      for (let pos = 0; pos < DEFINE_NUMBER; pos++) {
+        const ballVal = records[i].nums[pos];
+
+        for (let nextTail = 0; nextTail < 10; nextTail++) {
+
+          // Build possible[] by scanning history
+          const possible = []; // ordered oldest→newest
+          const upperH = interestedIndex - gap; // exclusive upper bound: h+gap < interestedIndex → h < interestedIndex-gap
+          for (let h = 0; h < upperH; h++) {
+            let found = false;
+            if (positionFixed) {
+              if (records[h].nums[pos] === ballVal) found = true;
+            } else {
+              for (const n of records[h].nums) if (n === ballVal) { found = true; break; }
+            }
+            if (!found) continue;
+
+            // Check draw h+gap
+            let success = false;
+            let nextNumber = 0;
+            for (const n of records[h + gap].nums) {
+              if (n % 10 === nextTail) { success = true; nextNumber = n; }
+            }
+            possible.push({ success, nextNumber });
+          }
+
+          if (possible.length === 0) continue;
+
+          // Count consecutive wins from the END (most recent match)
+          let continueWin = 0;
+          const possibleNum = [0,0,0,0];
+          for (let k = possible.length - 1; k >= 0; k--) {
+            if (possible[k].success) {
+              const item = Math.floor(possible[k].nextNumber / 10);
+              possibleNum[item]++;
+              continueWin++;
+            } else {
+              break; // stop at first failure
+            }
+          }
+
+          if (continueWin > threshold) {
+            if (nextTail === 0) {
+              hrtg[0].possibleNum[1] += possibleNum[1];
+              hrtg[0].possibleNum[2] += possibleNum[2];
+              hrtg[0].possibleNum[3] += possibleNum[3];
+            } else {
+              hrtg[nextTail].possibleNum[0] += possibleNum[0];
+              hrtg[nextTail].possibleNum[1] += possibleNum[1];
+              hrtg[nextTail].possibleNum[2] += possibleNum[2];
+              hrtg[nextTail].possibleNum[3] += possibleNum[3];
+            }
+            hrtg[nextTail].Value++;
+          }
+        }
+      }
+    }
+  }
+
+  runPass(false); // 不定位
+  runPass(true);  // 定位
+
+  // Build finalTailGroup[tail]: for j=1..39, group=j%10, item=j/10
+  const finalTailGroup = [];
+  for (let t=0; t<10; t++) {
+    const balls = [];
+    for (let j=1; j<DEFINE_SIZE; j++) {
+      if (j % 10 !== t) continue;
+      const item = Math.floor(j / 10);
+      balls.push({ num: j, value: hrtg[t].possibleNum[item] });
+    }
+    // Sort by value desc only - matches C# finalTailGroup[0,j].Sort((x,y) => -x.Value.CompareTo(y.Value))
+    balls.sort((a,b) => b.value - a.value);
+    finalTailGroup.push(balls);
+  }
+
+  // Bingo counts 前一/前二/前三 中幾個 (per tail group, top-1/2/3 each)
+  const curNums = (interestedIndex < records.length) ? records[interestedIndex].nums : [];
+  let b1=0, b2=0, b3=0;
+  for (let t=0; t<10; t++) {
+    const g = finalTailGroup[t];
+    let f1=false, f2=false, f3=false;
+    for (let j=0; j<Math.min(g.length,3); j++) {
+      if (curNums.includes(g[j].num)) {
+        if (j<1) f1=true;
+        if (j<2) f2=true;
+        if (j<3) f3=true;
+      }
+    }
+    if(f1) b1++; if(f2) b2++; if(f3) b3++;
+  }
+
+  // Second prediction from hrtg[t].Value (total qualifying rule count per tail)
+  const tailOrder2 = [...Array(10).keys()].sort((a,b) => hrtg[b].Value - hrtg[a].Value);
+  const AA_Group = tailOrder2.slice(0,5).sort((a,b)=>a-b);
+  const BB_Group = tailOrder2.slice(5,10).sort((a,b)=>a-b);
+  let AA_Bingo=0, BB_Bingo=0;
+  for (const n of curNums) {
+    if (AA_Group.includes(n%10)) AA_Bingo++;
+    if (BB_Group.includes(n%10)) BB_Bingo++;
+  }
+
+  return { finalTailGroup, tailOccurrence: hrtg.map(h=>h.Value), b1, b2, b3,
+           AA_Group, BB_Group, AA_Bingo, BB_Bingo,
+           hrtgTop5: tailOrder2.slice(0,5),   // rank-ordered, for theSame comparison
+           hrtgBot5:  tailOrder2.slice(5,10),
+           isPredict: interestedIndex >= records.length };
+}
+
+// ============================================================
+// 統計版路合牌  -- exact port of the theSame section in button13_Click
+//
+// Compare statisticsTailGroup top5 vs HistoryRuleTailGroup top5:
+//   theSame = count of shared tails between the two top5 sets
+//
+// theSame==5: GA=stat top5,  GB=stat bot5  (both size 5)
+// theSame==4: GA=shared A-side tails + non-shared (GG appended),
+//             GB=shared B-side tails + GG  (both size 6)
+// theSame==3: GA=stat A-side shared + hrtg B-side shared (size 6),
+//             GB=stat A-side non-shared + hrtg B-side non-shared (size 4)
+// theSame<=2: skip (return null)
+// ============================================================
+function calcCombinedTail(statTail, verTail) {
+  if (!statTail || !verTail) return null;
+
+  const statTop5 = statTail.statTop5;   // rank-ordered top5 from statisticsTailGroup
+  const statBot5 = statTail.statBot5;
+  const hrtgTop5 = verTail.hrtgTop5;    // rank-ordered top5 from HistoryRuleTailGroup
+  const hrtgBot5 = verTail.hrtgBot5;
+
+  // theSame = how many of statTop5 appear in hrtgTop5
+  let theSame = 0;
+  for (const s of statTop5)
+    for (const h of hrtgTop5)
+      if (s === h) theSame++;
+
+  const isPredict = interestedIndex >= records.length;
+  const curNums = isPredict ? [] : records[interestedIndex].nums;
+
+  function bingo(group) {
+    let b = 0;
+    for (const n of curNums)
+      if (group.includes(n%10)) b++;
+    return b;
+  }
+
+  if (theSame === 5) {
+    // GA = statTop5, GB = statBot5 (both 5 items)
+    const GA = [...statTop5].sort((a,b)=>a-b);
+    const GB = [...statBot5].sort((a,b)=>a-b);
+    return { label:'五同', theSame, GA, GB,
+             A_Bingo: bingo(GA), B_Bingo: bingo(GB), isPredict };
+
+  } else if (theSame === 4) {
+    // GA = stat A-side intersect hrtg A-side, GB = stat B-side intersect hrtg B-side
+    // GG = non-intersect (both sides), appended to both GA and GB
+    const GA = [], GB = [], GG = [];
+    for (const s of statTop5) {
+      if (hrtgTop5.includes(s)) GA.push(s); else GG.push(s);
+    }
+    for (const s of statBot5) {
+      if (hrtgBot5.includes(s)) GB.push(s); else GG.push(s);
+    }
+    for (const g of GG) { GA.push(g); GB.push(g); }
+    GA.sort((a,b)=>a-b); GB.sort((a,b)=>a-b);
+    return { label:'四同', theSame, GA, GB,
+             A_Bingo: bingo(GA), B_Bingo: bingo(GB), isPredict };
+
+  } else if (theSame === 3) {
+    // GA = stat A-side shared with hrtg A-side  +  hrtg B-side shared with stat B-side
+    // GB = stat A-side NOT shared  +  hrtg B-side NOT shared
+    const GA = [], GB = [];
+    for (const s of statTop5) {
+      if (hrtgTop5.includes(s)) GA.push(s); else GB.push(s);
+    }
+    for (const h of hrtgBot5) {
+      if (statBot5.includes(h)) GA.push(h); else GB.push(h);
+    }
+    GA.sort((a,b)=>a-b); GB.sort((a,b)=>a-b);
+    return { label:'三同', theSame, GA, GB,
+             A_Bingo: bingo(GA), B_Bingo: bingo(GB), isPredict };
+  }
+
+  return null; // theSame <= 2: skip
+}
+
+
+// ============================================================
+// RENDER TAIL STATS
+// ============================================================
+function renderTailStats() {
+  const container = document.getElementById('tailStatsTop');
+  if (records.length < 15 || interestedIndex < 15) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-text">資料不足，需至少15筆</div></div>';
+    return;
+  }
+
+  const statTail = calcStatisticsTail();
+  const verTail  = calcVersionTail();
+
+  if (!verTail) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-text">計算中...</div></div>';
+    return;
+  }
+
+  const isPredict = interestedIndex >= records.length;
+  const curNums = isPredict ? [] : records[interestedIndex].nums;
+  let html = '';
+
+  // === 統計拖尾 ===
+  if (statTail) {
+    html += `<div class="section-title">═══ 統計拖尾 ═══</div>`;
+    html += `<div class="pred-block">`;
+    html += `<div class="pred-row">
+      <span class="pred-label">預測A群尾數</span>
+      <div class="pred-balls">${statTail.A_Group.map(t=>`<span class="pred-ball">${t}</span>`).join('')}</div>
+      ${!isPredict ? `<span class="bingo-cnt">命中 <span>${statTail.A_Bingo}</span></span>` : ''}
+    </div>`;
+    html += `<div class="pred-row">
+      <span class="pred-label">預測B群尾數</span>
+      <div class="pred-balls">${statTail.B_Group.map(t=>`<span class="pred-ball b">${t}</span>`).join('')}</div>
+      ${!isPredict ? `<span class="bingo-cnt">命中 <span>${statTail.B_Bingo}</span></span>` : ''}
+    </div>`;
+    html += `</div>`;
+  }
+
+  // === 版路拖尾 ===
+  html += `<div class="section-title" style="margin-top:10px">═══ 版路拖尾 ═══
+    <span style="color:var(--text-muted);font-weight:400"> 前一中<span style="color:var(--green)">${verTail.b1}</span> 前二中<span style="color:var(--green)">${verTail.b2}</span> 前三中<span style="color:var(--green)">${verTail.b3}</span></span>
+  </div>`;
+
+  html += `<div class="tail-grid">`;
+  for (let t=0; t<10; t++) {
+    const g = verTail.finalTailGroup[t];
+    const occ = verTail.tailOccurrence[t];
+    const maxShow = t===0 ? 3 : 4;
+    let items = '';
+    for (let j=0; j<Math.min(maxShow, g.length); j++) {
+      const isHit = curNums.includes(g[j].num);
+      items += `<span class="tail-item ${isHit?'hit':''}">${g[j].num}(${g[j].value})</span>`;
+    }
+    if (!items) items = `<span style="color:var(--text-muted);font-size:10px">─</span>`;
+    html += `<div class="tail-row">
+      <span class="tail-lbl">尾數_${t}</span>
+      <span class="tail-occ">出現${occ}次=&gt;</span>
+      <div class="tail-items">${items}</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // 版路 A/B 群 prediction
+  html += `<div class="pred-block" style="margin-top:8px">`;
+  html += `<div class="pred-row">
+    <span class="pred-label">預測A群尾數</span>
+    <div class="pred-balls">${verTail.AA_Group.map(t=>`<span class="pred-ball">${t}</span>`).join('')}</div>
+    ${!isPredict ? `<span class="bingo-cnt">命中 <span>${verTail.AA_Bingo}</span></span>` : ''}
+  </div>`;
+  html += `<div class="pred-row">
+    <span class="pred-label">預測B群尾數</span>
+    <div class="pred-balls">${verTail.BB_Group.map(t=>`<span class="pred-ball b">${t}</span>`).join('')}</div>
+    ${!isPredict ? `<span class="bingo-cnt">命中 <span>${verTail.BB_Bingo}</span></span>` : ''}
+  </div>`;
+  html += `</div>`;
+
+  // === 統計版路合牌 ===
+  if (statTail) {
+    const combined = calcCombinedTail(statTail, verTail);
+    if (combined) {
+      html += `<div class="section-title" style="margin-top:10px">════ 統計版路合牌 -&gt; ${combined.label} ════</div>`;
+      html += `<div class="pred-block">`;
+      html += `<div class="pred-row">
+        <span class="pred-label">預測A群尾數</span>
+        <div class="pred-balls">${combined.GA.map(t=>`<span class="pred-ball">${t}</span>`).join('')}</div>
+        ${!isPredict ? `<span class="bingo-cnt">命中 <span>${combined.A_Bingo}</span></span>` : ''}
+      </div>`;
+      html += `<div class="pred-row">
+        <span class="pred-label">預測B群尾數</span>
+        <div class="pred-balls">${combined.GB.map(t=>`<span class="pred-ball b">${t}</span>`).join('')}</div>
+        ${!isPredict ? `<span class="bingo-cnt">命中 <span>${combined.B_Bingo}</span></span>` : ''}
+      </div>`;
+      html += `</div>`;
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// 號碼次數 (bottom section)
+// From Form1.cs button8_Click (lines 10878-11170)
+// Count ball frequencies in last nDraws draws before interestedIndex
+// Group by tail (j%10), sort by freq desc within each tail
+// ============================================================
+function calcBallFreq() {
+  if (records.length < 5) return;
+  const nDraws = parseInt(document.getElementById('nDraws').value);
+  const container = document.getElementById('ballFreqContent');
+
+  // Count frequencies: records[interestedIndex-nDraws .. interestedIndex-1]
+  const ballCnt = new Array(40).fill(0); // index = ball number 1..39
+  let counted = 0;
+  for (let i = interestedIndex-1; i >= 0 && counted < nDraws; i--, counted++) {
+    for (const n of records[i].nums) {
+      if (n>=1 && n<=39) ballCnt[n]++;
+    }
+  }
+
+  // finalTailGroup[tail] = balls sorted by freq desc
+  const ftg = [];
+  for (let t=0; t<10; t++) {
+    const balls = [];
+    for (let j=1; j<DEFINE_SIZE; j++) {
+      if (j%10 !== t) continue;
+      balls.push({ num:j, cnt:ballCnt[j] });
+    }
+    balls.sort((a,b) => b.cnt-a.cnt || b.num-a.num);
+    ftg.push(balls);
+  }
+
+  // Bingo counts
+  const curNums = (interestedIndex < records.length) ? records[interestedIndex].nums : [];
+  let b1=0, b2=0, b3=0;
+  for (let t=0; t<10; t++) {
+    const g = ftg[t];
+    let f1=false, f2=false, f3=false;
+    for (let j=0; j<Math.min(g.length,3); j++) {
+      if (curNums.includes(g[j].num)) {
+        if(j<1) f1=true; if(j<2) f2=true; if(j<3) f3=true;
+      }
+    }
+    if(f1) b1++; if(f2) b2++; if(f3) b3++;
+  }
+
+  // All balls sorted by freq
+  const allBalls = [];
+  for (let b=1; b<=39; b++) allBalls.push({ num:b, cnt:ballCnt[b] });
+  allBalls.sort((a,b) => b.cnt-a.cnt || a.num-b.num);
+
+  // Top 24
+  const top24 = allBalls.slice(0,24).map(x=>x.num).sort((a,b)=>a-b);
+  let top24Bingo=0;
+  for (const n of curNums) if (top24.includes(n)) top24Bingo++;
+
+  // Bottom 10 (indices 29-38 of sorted list, skip ball 0)
+  const last10 = allBalls.slice(29, 39).map(x=>x.num).filter(n=>n>0).sort((a,b)=>a-b);
+  let last10Bingo=0;
+  for (const n of curNums) if (last10.includes(n)) last10Bingo++;
+
+  // Render
+  let html = `<div class="info-line">═══出現次數═══ 前一中<span class="hl">${b1}</span>, 前二中<span class="hl">${b2}</span>, 前三中<span class="hl">${b3}</span></div>`;
+  html += `<div class="tail-grid" style="margin:6px 0">`;
+  for (let t=0; t<10; t++) {
+    const g = ftg[t];
+    const maxShow = t===0 ? 3 : 4;
+    let items = '';
+    for (let j=0; j<Math.min(maxShow,g.length); j++) {
+      const isHit = curNums.includes(g[j].num);
+      items += `<span class="tail-item ${isHit?'hit':''}">${g[j].num}(${g[j].cnt})</span>`;
+    }
+    html += `<div class="tail-row">
+      <span class="tail-lbl">尾數_${t}</span>
+      <div class="tail-items">${items}</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // Top 24 big net
+  html += `<div class="bignet-wrap">
+    <div class="bignet-title">═══ 前24名大網捕魚24中${top24Bingo} ═══</div>
+    <div class="bignet-balls">`;
+  for (const n of top24) {
+    const isHit = curNums.includes(n);
+    html += `<span class="net-ball ${isHit?'hit':''}">${pad(n)}</span>`;
+  }
+  html += `</div>`;
+
+  // Bottom 10
+  html += `<div class="last10-title">═══ 末10名不出10中${last10Bingo} ═══</div>
+    <div class="bignet-balls">`;
+  for (const n of last10) {
+    const isHit = curNums.includes(n);
+    html += `<span class="net-ball red ${isHit?'hit':''}">${pad(n)}</span>`;
+  }
+  html += `</div></div>`;
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// 版路拖牌顯示 - 計算 qualifying entries 的 streak 資料
+// ============================================================
+function calcVersionTailDisplay() {
+  if (interestedIndex < 15) return null;
+
+  const backStep = 10;
+  const threshold = 2;
+  const DAYS_7 = 7; // 最近7期為全匹配觸發，之外只偵測共尾
+
+  const qualifyingEntries = [];
+
+  function runPass(positionFixed) {
+    for (let i = interestedIndex - backStep; i < interestedIndex; i++) {
+      if (i < 0) continue;
+      const gap = interestedIndex - i; // 1..10
+      const daysFromNow = interestedIndex - i; // same as gap for backStep window
+
+      for (let pos = 0; pos < DEFINE_NUMBER; pos++) {
+        const ballVal = records[i].nums[pos];
+
+        for (let nextTail = 0; nextTail < 10; nextTail++) {
+
+          // Build possible[] - same as calcVersionTail
+          const possible = [];
+          const upperH = interestedIndex - gap;
+          for (let h = 0; h < upperH; h++) {
+            let found = false;
+            if (positionFixed) {
+              if (records[h].nums[pos] === ballVal) found = true;
+            } else {
+              for (const n of records[h].nums) if (n === ballVal) { found = true; break; }
+            }
+            if (!found) continue;
+
+            let success = false;
+            let nextNumber = 0;
+            for (const n of records[h + gap].nums) {
+              if (n % 10 === nextTail) { success = true; nextNumber = n; }
+            }
+            possible.push({ h, success, nextNumber });
+          }
+
+          if (possible.length === 0) continue;
+
+          // Count streak from END
+          let continueWin = 0;
+          const streakDraws = []; // newest first
+          for (let k = possible.length - 1; k >= 0; k--) {
+            if (possible[k].success) {
+              streakDraws.push({ h: possible[k].h, nextNumber: possible[k].nextNumber });
+              continueWin++;
+            } else {
+              break;
+            }
+          }
+
+          if (continueWin > threshold) {
+            qualifyingEntries.push({
+              positionFixed,
+              triggerDrawIndex: i,    // records[i] is the "active" trigger
+              position: pos,
+              ballVal,
+              gap,
+              nextTail,
+              streakDraws,            // ordered newest-first
+              daysFromNow,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  runPass(false); // 不定位
+  runPass(true);  // 定位
+
+  return qualifyingEntries;
+}
+
+// ============================================================
+// 版路拖牌渲染 - tab1
+// ============================================================
+function renderVersionTab() {
+  const container = document.getElementById('tab1');
+  if (!container) return;
+
+  const isPositionFixed = document.getElementById('banluFixedCheck')?.checked ?? false;
+
+  // Display range: last 30 records before interestedIndex
+  const displayCount = Math.min(30, interestedIndex);
+  const startRI = interestedIndex - displayCount; // oldest shown
+  const endRI   = interestedIndex - 1;            // newest shown
+
+  // --- Compute highlights if a ball is selected ---
+  // triggerRows[ri] = true  → this row is a trigger (mark the clicked cell blue)
+  // hitRows[ri]     = true  → this row is a result row (all 5 balls glow green)
+  const triggerRows = {};
+  const hitRows     = {};
+
+  if (selectedBall) {
+    const { ball, col, ri: clickedRI } = selectedBall;
+    // gap = distance from clicked row to interestedIndex
+    const gap = interestedIndex - clickedRI;
+
+    // Scan all rows in display range as candidate triggers
+    for (let h = startRI; h <= endRI; h++) {
+      let found = false;
+      if (isPositionFixed) {
+        found = (records[h].nums[col] === ball);
+      } else {
+        found = records[h].nums.includes(ball);
+      }
+      if (!found) continue;
+
+      triggerRows[h] = true;
+
+      // The result row is h + gap
+      const resultRI = h + gap;
+      if (resultRI < records.length) {
+        hitRows[resultRI] = true;
+      }
+    }
+  }
+
+  // --- Build HTML ---
+  const WEEK_CH2 = ['日','一','二','三','四','五','六'];
+  const selInfo = selectedBall
+    ? `號碼 <b style="color:var(--gold)">${pad(selectedBall.ball)}</b>　位置 N${selectedBall.col+1}　往後 <b style="color:var(--accent2)">${interestedIndex - selectedBall.ri}</b> 期`
+    : '點擊下方表格中的號碼開始分析';
+
+  let html = `
+  <div style="display:flex;align-items:center;gap:12px;padding:6px 10px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap">
+    <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:5px">
+      <input type="checkbox" id="banluFixedCheck" ${isPositionFixed?'checked':''} onchange="renderVersionTab()"> 定位
+    </label>
+    <span style="font-size:12px;color:var(--text)">${selInfo}</span>
+    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">
+      🔵觸發期　🟢結果期全亮
+    </span>
+  </div>
+  <div style="overflow-y:auto;flex:1">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="background:var(--panel2);position:sticky;top:0;z-index:2">
+        <th style="padding:4px 6px;text-align:left;color:var(--text-dim);font-weight:500;white-space:nowrap">日期</th>
+        <th style="padding:4px 4px;text-align:left;color:var(--text-dim);font-weight:500">星期</th>
+        <th style="padding:4px 8px;text-align:center;color:var(--text-dim);font-weight:500">N1</th>
+        <th style="padding:4px 8px;text-align:center;color:var(--text-dim);font-weight:500">N2</th>
+        <th style="padding:4px 8px;text-align:center;color:var(--text-dim);font-weight:500">N3</th>
+        <th style="padding:4px 8px;text-align:center;color:var(--text-dim);font-weight:500">N4</th>
+        <th style="padding:4px 8px;text-align:center;color:var(--text-dim);font-weight:500">N5</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  // Extend display to include hit rows that may fall beyond endRI
+  // (e.g. if gap > 0 and result is interestedIndex itself or beyond)
+  const maxRI = Math.min(records.length - 1, endRI + (selectedBall ? interestedIndex - selectedBall.ri : 0));
+  // But cap at interestedIndex (don't show future)
+  const showEnd = Math.min(records.length - 1, interestedIndex - 1 + (selectedBall ? interestedIndex - selectedBall.ri : 0));
+  // Actually: just show startRI..interestedIndex-1 plus any hitRows that are within records
+  // For simplicity extend to cover all possible result rows
+  const renderEnd = Math.min(records.length - 1, endRI + (selectedBall ? (interestedIndex - selectedBall.ri) : 0));
+
+  for (let ri = startRI; ri <= renderEnd; ri++) {
+    const rec = records[ri];
+    const d = new Date(rec.date.replace(/\//g,'-'));
+    const dow = WEEK_CH2[d.getDay()];
+    const shortDate = rec.date.slice(5);
+
+    const isTrigger = !!triggerRows[ri];
+    const isHit     = !!hitRows[ri];
+
+    let rowBg = '';
+    if (isHit)     rowBg = 'background:rgba(232,160,32,0.15)';
+    else if (isTrigger) rowBg = '';  // trigger row: no row bg, just cell highlight
+
+    html += `<tr style="${rowBg}">`;
+    html += `<td style="padding:2px 6px;color:var(--text-dim);white-space:nowrap;font-size:11px">${shortDate}</td>`;
+    html += `<td style="padding:2px 2px;color:var(--text-muted);font-size:10px">星期${dow}</td>`;
+
+    for (let col = 0; col < DEFINE_NUMBER; col++) {
+      const ball = rec.nums[col];
+      const isSelectedCell = selectedBall && ri === selectedBall.ri && col === selectedBall.col;
+
+      let extraStyle = '';
+      if (isSelectedCell) {
+        // The clicked cell itself
+        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px;outline:2px solid #fff;outline-offset:1px';
+      } else if (isTrigger && isPositionFixed && col === selectedBall?.col) {
+        // Trigger cell (same position, 定位)
+        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
+      } else if (isTrigger && !isPositionFixed && records[ri].nums[col] === selectedBall?.ball) {
+        // Trigger cell (any position with matching ball, 不定位)
+        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
+      } else if (isHit) {
+        // Result row: all 5 balls glow yellow/gold
+        extraStyle = 'background:#3a2a00;color:#fcd34d;border:2px solid #e8a020;border-radius:5px';
+      }
+
+      html += `<td style="padding:2px 3px;text-align:center">
+        <span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:4px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;${extraStyle}"
+          onclick="selectVersionBall(${ball},${col},${ri})">${pad(ball)}</span>
+      </td>`;
+    }
+    html += `</tr>`;
+  }
+
+  // 下期開獎 row (when interestedIndex = records.length)
+  if (interestedIndex >= records.length) {
+    const isNextHit = !!hitRows[records.length];
+    html += `<tr style="${isNextHit?'background:rgba(232,160,32,0.15)':'background:rgba(58,123,213,0.08)'}">
+      <td colspan="2" style="padding:4px 6px;color:var(--accent);font-size:11px;font-weight:700">▶ 下期開獎</td>
+      <td colspan="5" style="padding:4px;text-align:center;color:${isNextHit?'#fcd34d':'var(--text-muted)'};font-size:11px">${isNextHit?'🎯 預測命中範圍':'—'}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+}
+
+// ============================================================
+// VERSION TAB BALL CLICK
+// ============================================================
+function selectVersionBall(ball, col, ri) {
+  // Toggle deselect
+  if (selectedBall && selectedBall.ball === ball && selectedBall.col === col && selectedBall.ri === ri) {
+    selectedBall = null;
+  } else {
+    selectedBall = { ball, col, ri };
+  }
+  renderVersionTab();
+}
+
+// ============================================================
+// 版路觀察 Tab (tab2)
+// 功能1: 近N3中1 (PurePositionAnalyzer)
+// 功能2: DragNumber (DragNumberAnalyzer)
+// ============================================================
+
+// ----------- 工具函數 -----------
+function combinations(arr, k) {
+  const result = [];
+  function helper(start, cur) {
+    if (cur.length === k) { result.push([...cur]); return; }
+    for (let i = start; i < arr.length; i++) {
+      cur.push(arr[i]);
+      helper(i + 1, cur);
+      cur.pop();
+    }
+  }
+  helper(0, []);
+  return result;
+}
+
+// ----------- 近N3中1: PurePositionAnalyzer -----------
+function runPositionAnalysis(days, minSingle, minDouble, minTriple) {
+  // Use interestedIndex as upper bound (exclusive): only use records[0..interestedIndex-1]
+  const N = interestedIndex; // C# equivalent: dataList.Count limited to selected period
+  if (N < 10) return { results: [], log: '資料不足' };
+
+  // 取最近 days 天的 record indices (within [0..N-1])
+  const allDates = [...new Set(records.slice(0, N).map(r => r.date))].sort();
+  const recentDates = new Set(allDates.slice(-days));
+
+  // numberList: { num, pos(1-based), idx, date }
+  const numberList = [];
+  let latestIdx = -1;
+  for (let i = 0; i < N; i++) {
+    if (!recentDates.has(records[i].date)) continue;
+    for (let pos = 0; pos < DEFINE_NUMBER; pos++) {
+      numberList.push({ num: records[i].nums[pos], pos: pos + 1, idx: i, date: records[i].date });
+    }
+    if (i > latestIdx) latestIdx = i;
+  }
+
+  if (latestIdx < 1) return { results: [], log: '資料不足' };
+  const startIdx = latestIdx - 1;
+
+  // 去重觸發條件
+  const triggerMap = new Map();
+  for (const e of numberList) {
+    const key = `${e.num}_${e.pos}_${e.idx}`;
+    if (!triggerMap.has(key)) triggerMap.set(key, e);
+  }
+  const uniqueList = [...triggerMap.values()];
+
+  // 收集所有不重複號碼作為目標球
+  const allNumbers = [...new Set(numberList.map(e => e.num))].sort((a,b) => a-b);
+
+  // CheckAlreadySuccess: 觸發球在最近3期後是否已命中目標
+  function checkAlreadySuccess(triggerNum, triggerPos, triggerIdx, targetNums) {
+    for (let offset = 1; offset <= 3; offset++) {
+      const ci = triggerIdx + offset;
+      if (ci > latestIdx || ci >= N) break;
+      const cn = records[ci].nums;
+      if (targetNums.some(t => cn.includes(t))) return true;
+    }
+    return false;
+  }
+
+  // CountConsecutive: 從 startIdx 往回，找 triggerNum 在 triggerPos-1 位置，
+  //   看後 lookAhead 期內是否含 targetNums 任一
+  function countConsecutive(triggerNum, triggerPos, targetNums, lookAhead) {
+    let count = 0;
+    const recList = [];
+    let idx = startIdx;
+    while (idx >= 0) {
+      const curNums = records[idx].nums;
+      if (curNums[triggerPos - 1] !== triggerNum) { idx--; continue; }
+
+      let found = false;
+      let foundInfo = null;
+      for (let offset = 1; offset <= lookAhead; offset++) {
+        const ci = idx + offset;
+        if (ci >= N) break;
+        const cn = records[ci].nums;
+        for (const t of targetNums) {
+          if (cn.includes(t)) {
+            found = true;
+            foundInfo = { offset, targetNum: t, date: records[ci].date };
+            break;
+          }
+        }
+        if (found) break;
+      }
+
+      if (found) {
+        count++;
+        recList.push({ date: records[idx].date, status: '成功', found: foundInfo });
+        idx--;
+      } else {
+        recList.push({ date: records[idx].date, status: '失敗' });
+        break;
+      }
+    }
+    return { count, records: recList };
+  }
+
+  const results = [];
+  let filteredCount = 0;
+
+  for (const trigger of uniqueList) {
+    const { num: triggerNum, pos: triggerPos, idx: triggerIdx } = trigger;
+
+    // 單球
+    for (const target of allNumbers) {
+      if (target === triggerNum) continue;
+      const targetList = [target];
+      if (checkAlreadySuccess(triggerNum, triggerPos, triggerIdx, targetList)) { filteredCount++; continue; }
+      const cr = countConsecutive(triggerNum, triggerPos, targetList, 3);
+      if (cr.count >= minSingle) {
+        results.push({ type: '單球', triggerNum, triggerPos, targets: targetList, count: cr.count, recs: cr.records });
+      }
+    }
+
+    // 雙球
+    for (const combo of combinations(allNumbers, 2)) {
+      if (combo.includes(triggerNum)) continue;
+      if (checkAlreadySuccess(triggerNum, triggerPos, triggerIdx, combo)) { filteredCount++; continue; }
+      const cr = countConsecutive(triggerNum, triggerPos, combo, 3);
+      if (cr.count >= minDouble) {
+        results.push({ type: '雙球', triggerNum, triggerPos, targets: combo, count: cr.count, recs: cr.records });
+      }
+    }
+
+    // 三球
+    for (const combo of combinations(allNumbers, 3)) {
+      if (combo.includes(triggerNum)) continue;
+      if (checkAlreadySuccess(triggerNum, triggerPos, triggerIdx, combo)) { filteredCount++; continue; }
+      const cr = countConsecutive(triggerNum, triggerPos, combo, 3);
+      if (cr.count >= minTriple) {
+        results.push({ type: '三球', triggerNum, triggerPos, targets: combo, count: cr.count, recs: cr.records });
+      }
+    }
+  }
+
+  // 排序: 三球>雙球>單球, 同類按連續次數降序
+  const typeOrder = { '三球': 0, '雙球': 1, '單球': 2 };
+  results.sort((a, b) => {
+    const oa = typeOrder[a.type], ob = typeOrder[b.type];
+    if (oa !== ob) return oa - ob;
+    return b.count - a.count;
+  });
+
+  // 目標球出現次數統計
+  const targetCount = {};
+  for (const r of results) {
+    const tk = `${r.triggerNum}_${r.triggerPos}`;
+    for (const t of r.targets) {
+      if (!targetCount[t]) targetCount[t] = new Set();
+      targetCount[t].add(tk);
+    }
+  }
+  const targetStats = Object.entries(targetCount)
+    .map(([num, set]) => ({ num: +num, count: set.size }))
+    .sort((a, b) => b.count - a.count || a.num - b.num);
+
+  return { results, filteredCount, targetStats, uniqueCount: uniqueList.length, allNumbers };
+}
+
+// ----------- DragNumber: DragNumberAnalyzer -----------
+function runDragNumberAnalysis(daysBack, useOccurrenceLimit, maxOccurrences, threshold, validatePosition, triggerCount) {
+  const N = interestedIndex; // limit to selected period
+  // Find last valid index within [0..N-1]
+  let lastValidIdx = N - 1;
+  while (lastValidIdx >= 0 && !records[lastValidIdx].date) lastValidIdx--;
+  if (lastValidIdx < triggerCount) return null;
+
+  const lastNIndices = [];
+  for (let i = lastValidIdx - triggerCount + 1; i <= lastValidIdx; i++) lastNIndices.push(i);
+
+  // globalStats[num] = total count across all triggers
+  const globalNumberCounter = {};
+  const globalTailCounter = {};
+
+  // numSourceMap[num][srcLabel] = [{ triggerNum, datePairs[] }]
+  const numSourceMap = {};
+
+  const triggerResults = []; // per trigger
+
+  for (let triggerI = triggerCount - 1; triggerI >= 0; triggerI--) {
+    const triggerGlobalIdx = lastNIndices[triggerI];
+    const periodsAhead = triggerCount - triggerI;
+    const triggerLabelNum = triggerCount - triggerI;
+    const triggerNums = records[triggerGlobalIdx].nums;
+
+    const posResults = [];
+
+    for (let pos = 0; pos < DEFINE_NUMBER; pos++) {
+      const triggerNum = triggerNums[pos];
+      const srcLabel = `#${triggerLabelNum}-${pos + 1}`;
+
+      const allNextNums = [];
+      let matchCount = 0;
+      let occurrenceCount = 0;
+      const matchRecords = [];
+
+      const searchStart = triggerGlobalIdx - 1;
+      const searchEnd = useOccurrenceLimit ? 0 : Math.max(0, triggerGlobalIdx - daysBack);
+
+      for (let i = searchStart; i >= searchEnd; i--) {
+        if (i + periodsAhead >= N) continue;
+        if (!records[i].date) continue;
+
+        const curNums = records[i].nums;
+        let isMatch = false;
+        if (validatePosition) {
+          isMatch = curNums[pos] === triggerNum;
+        } else {
+          isMatch = curNums.includes(triggerNum);
+        }
+        if (!isMatch) continue;
+
+        if (useOccurrenceLimit && occurrenceCount >= maxOccurrences) break;
+
+        matchCount++;
+        occurrenceCount++;
+
+        const nextIdx = i + periodsAhead;
+        if (nextIdx >= N || !records[nextIdx].date) continue;
+
+        const nextNums = records[nextIdx].nums;
+        for (const n of nextNums) {
+          allNextNums.push(n);
+          const key = `${srcLabel}|${triggerNum}`;
+          if (!numSourceMap[n]) numSourceMap[n] = {};
+          if (!numSourceMap[n][key]) numSourceMap[n][key] = { srcLabel, triggerNum, pairs: [] };
+          numSourceMap[n][key].pairs.push({
+            fromDate: records[i].date, fromNums: [...curNums],
+            toDate: records[nextIdx].date, toNums: [...nextNums]
+          });
+        }
+
+        matchRecords.push({
+          occ: occurrenceCount,
+          fromDate: records[i].date, fromNums: [...curNums],
+          periodsAhead,
+          toDate: records[nextIdx].date, toNums: [...nextNums]
+        });
+      }
+
+      // Count frequencies
+      const counter = {};
+      for (const n of allNextNums) { counter[n] = (counter[n] || 0) + 1; }
+
+      const filtered = Object.entries(counter)
+        .filter(([,cnt]) => cnt > threshold)
+        .map(([num, cnt]) => ({ num: +num, cnt }))
+        .sort((a, b) => b.cnt - a.cnt || a.num - b.num);
+
+      for (const { num, cnt } of filtered) {
+        globalNumberCounter[num] = (globalNumberCounter[num] || 0) + cnt;
+        const tail = num % 10;
+        globalTailCounter[tail] = (globalTailCounter[tail] || 0) + cnt;
+      }
+
+      posResults.push({ pos: pos + 1, triggerNum, matchCount, matchRecords, filtered, srcLabel });
+    }
+
+    triggerResults.push({
+      labelNum: triggerLabelNum, globalIdx: triggerGlobalIdx,
+      date: records[triggerGlobalIdx].date,
+      periodsAhead, nums: triggerNums, posResults
+    });
+  }
+
+  // Global stats sorted
+  const globalNumsSorted = Object.entries(globalNumberCounter)
+    .map(([num, cnt]) => ({ num: +num, cnt }))
+    .sort((a, b) => b.cnt - a.cnt || a.num - b.num);
+
+  const globalTailsSorted = Object.entries(globalTailCounter)
+    .map(([tail, cnt]) => ({ tail: +tail, cnt }))
+    .sort((a, b) => b.cnt - a.cnt || a.tail - b.tail);
+
+  return { triggerResults, numSourceMap, globalNumsSorted, globalTailsSorted };
+}
+
+// ----------- 版路觀察 Tab 渲染 -----------
+function buildObserveTabShell(mode, posFixed) {
+  return `
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap">
+    <button onclick="setObserveMode('near3')" id="btnNear3" style="padding:3px 12px;border-radius:4px;font-size:12px;border:1px solid var(--border);cursor:pointer;
+      background:${mode==='near3'?'var(--accent)':'var(--panel)'};color:${mode==='near3'?'#fff':'var(--text-dim)'}">近N3中1</button>
+    <button onclick="setObserveMode('drag')" id="btnDrag" style="padding:3px 12px;border-radius:4px;font-size:12px;border:1px solid var(--border);cursor:pointer;
+      background:${mode==='drag'?'var(--accent)':'var(--panel)'};color:${mode==='drag'?'#fff':'var(--text-dim)'}">DragNumber</button>
+    <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px">
+      <input type="checkbox" id="observePosFixed" ${posFixed?'checked':''} onchange="renderObserveTab()"> 定位
+    </label>
+    <span id="observeStatus" style="font-size:11px;color:var(--text-muted);margin-left:auto"></span>
+  </div>
+  <div id="observeContent" style="flex:1;overflow-y:auto;padding:8px 10px;font-size:12px">
+    <div style="color:var(--text-muted);text-align:center;padding:20px">計算中...</div>
+  </div>`;
+}
+
+let observeMode = 'near3';
+
+function setObserveMode(mode) {
+  observeMode = mode;
+  renderObserveTab();
+}
+
+function renderObserveTab() {
+  const container = document.getElementById('tab2');
+  if (!container) return;
+  const posFixed = document.getElementById('observePosFixed')?.checked ?? false;
+  const mode = observeMode;
+  container.innerHTML = buildObserveTabShell(mode, posFixed);
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  renderObserveResults(mode, posFixed);
+}
+
+function renderObserveResults(mode, posFixed) {
+  const content = document.getElementById('observeContent');
+  const status = document.getElementById('observeStatus');
+  if (!content) return;
+  setTimeout(() => {
+    try {
+      if (mode === 'near3') {
+        renderNear3Results(content, status, posFixed);
+      } else {
+        renderDragResults(content, status, posFixed);
+      }
+    } catch(e) {
+      content.innerHTML = `<div style="color:#e05252">錯誤: ${e.message}<br>${e.stack}</div>`;
+    }
+  }, 30);
+}
+
+function renderNear3Results(content, status, posFixed) {
+  // days=3, minSingle=3, minDouble=5, minTriple=10
+  const days = 3;
+  const { results, filteredCount, targetStats, uniqueCount, allNumbers } = runPositionAnalysis(days, 3, 5, 10);
+
+  if (status) status.textContent = `共 ${results.length} 個模式 (已過濾 ${filteredCount} 個)`;
+
+  // Use interestedIndex to compute recent dates (matches runPositionAnalysis)
+  const allDates = [...new Set(records.slice(0, interestedIndex).map(r => r.date))].sort();
+  const recentDates = allDates.slice(-days);
+
+  // Recent N days info
+  let html = `<div style="color:var(--accent2);margin-bottom:4px">連續成功分析 - 純精確排序位置</div>`;
+  html += `<div style="color:var(--text-muted);font-size:11px">門檻設定: 單球≥3 | 雙球≥5 | 三球≥10</div>`;
+  html += `<div style="color:var(--text-muted);font-size:11px;margin-bottom:8px">最近 ${days} 天觸發條件: ${uniqueCount} 個 | 目標球: ${allNumbers.length} 個 | 已過濾: ${filteredCount} 個</div>`;
+
+  // Recent dates summary
+  html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px">`;
+  for (const date of recentDates) {
+    const recs = records.slice(0, interestedIndex).filter(r => r.date === date);
+    for (const rec of recs) {
+      html += `<div style="color:var(--text-dim)">${rec.date}: ${rec.nums.map((n,i) => `排序${i+1}=${String(n).padStart(2,'0')}`).join(' | ')}</div>`;
+    }
+  }
+  html += `</div>`;
+
+  if (results.length === 0) {
+    html += `<div style="color:var(--text-muted);padding:10px">未找到符合門檻的模式</div>`;
+    content.innerHTML = html;
+    return;
+  }
+
+  // Results table
+  const singleC = results.filter(r=>r.type==='單球').length;
+  const doubleC = results.filter(r=>r.type==='雙球').length;
+  const tripleC = results.filter(r=>r.type==='三球').length;
+  html += `<div style="color:var(--gold);margin-bottom:6px;font-size:11px">完整模式列表 (共 ${results.length} 個) | 門檻: 單球≥3次(${singleC}個) | 雙球≥5次(${doubleC}個) | 三球≥10次(${tripleC}個)</div>`;
+
+  html += `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px">
+    <thead>
+      <tr style="background:var(--panel2);color:var(--text-dim)">
+        <th style="padding:3px 6px;text-align:left">#</th>
+        <th style="padding:3px 6px;text-align:left">類型</th>
+        <th style="padding:3px 6px;text-align:left">觸發球</th>
+        <th style="padding:3px 6px;text-align:left">位置</th>
+        <th style="padding:3px 6px;text-align:left">目標球</th>
+        <th style="padding:3px 6px;text-align:right">連續</th>
+      </tr>
+    </thead><tbody>`;
+
+  const typeColor = { '三球': '#48bb78', '雙球': '#e8a020', '單球': '#3a7bd5' };
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    const tc = typeColor[r.type] || '#aaa';
+    const targetStr = r.targets.map(t => String(t).padStart(2,'0')).join('/');
+    const rowBg = i % 2 === 0 ? '' : 'background:var(--panel2)';
+    html += `<tr style="${rowBg}">
+      <td style="padding:2px 6px;color:var(--text-muted)">${i+1}</td>
+      <td style="padding:2px 6px;color:${tc};font-weight:600">${r.type}</td>
+      <td style="padding:2px 6px;color:var(--gold)">${String(r.triggerNum).padStart(2,'0')}</td>
+      <td style="padding:2px 6px;color:var(--text-dim)">排序${r.triggerPos}</td>
+      <td style="padding:2px 6px;color:var(--text)">${targetStr}</td>
+      <td style="padding:2px 6px;text-align:right;color:var(--accent2);font-weight:700">${r.count}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+
+  // Target stats
+  html += `<div style="color:var(--accent2);margin-bottom:4px">目標球出現次數統計</div>`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+  for (const { num, count } of targetStats) {
+    const intensity = Math.min(count * 20, 100);
+    html += `<span style="padding:2px 8px;background:rgba(58,123,213,${intensity/100*0.6+0.1});border:1px solid var(--border);border-radius:3px;font-size:11px;color:var(--text)">
+      <b style="color:var(--gold)">${String(num).padStart(2,'0')}</b> <span style="color:var(--text-dim)">${count}次</span>
+    </span>`;
+  }
+  html += `</div>`;
+
+  content.innerHTML = html;
+}
+
+function renderDragResults(content, status, posFixed) {
+  // triggerCount=3, maxOccurrences=4, threshold=1 (matching the example output)
+  const result = runDragNumberAnalysis(30, true, 4, 1, posFixed, 3);
+  if (!result) {
+    content.innerHTML = '<div style="color:var(--text-muted)">資料不足</div>';
+    return;
+  }
+
+  const { triggerResults, numSourceMap, globalNumsSorted, globalTailsSorted } = result;
+  const maxGlobal = globalNumsSorted.length > 0 ? globalNumsSorted[0].cnt : 1;
+
+  if (status) status.textContent = `${posFixed?'定位':'不定位'} | 前4次出現 | 門檻>1`;
+
+  let html = '';
+
+  // ── 觸發條件標頭 ───────────────────────────────────────────
+  html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;margin-bottom:10px;font-size:11px">`;
+  html += `<div style="color:var(--gold);font-weight:600;margin-bottom:6px">最後${triggerResults.length}筆數據作為觸發條件</div>`;
+  for (const tr of [...triggerResults].reverse()) {
+    const numsStr = tr.nums.map((n,i)=>`排序${i+1}=<b style="color:var(--accent2)">${String(n).padStart(2,'0')}</b>`).join('　');
+    html += `<div style="margin-bottom:2px;font-size:11px"><span style="color:var(--text-muted)">倒數第${tr.labelNum}筆 (${tr.date}):</span> ${numsStr}</div>`;
+  }
+  html += `<div style="margin-top:4px;font-size:10px;color:var(--text-muted)">${posFixed?'資料有效性檢查: 驗證排序位置':'資料有效性檢查: 不驗證位置'}</div>`;
+  html += `</div>`;
+
+  // ── 各觸發條件詳細結果 ─────────────────────────────────────
+  for (const tr of triggerResults) {
+    html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:10px;overflow:hidden">`;
+    // 觸發條件標題
+    html += `<div style="padding:6px 10px;background:rgba(58,123,213,0.15);border-bottom:1px solid var(--border)">
+      <span style="color:var(--gold);font-weight:600">觸發條件 #${tr.labelNum}</span>
+      <span style="color:var(--text-muted);font-size:11px;margin-left:8px">倒數第${tr.labelNum}筆　${tr.date}　找下 <b style="color:var(--accent2)">${tr.periodsAhead}</b> 期　搜尋範圍: 前4次出現　門檻: >1</span>
+    </div>`;
+
+    for (const pr of tr.posResults) {
+      html += `<div style="border-bottom:1px solid var(--border);padding:6px 10px">`;
+      // 排序標題
+      html += `<div style="margin-bottom:4px">
+        <span style="color:var(--text-dim);font-size:11px">排序${pr.pos}</span>
+        <span style="color:var(--accent2);font-size:13px;font-weight:700;margin-left:6px">${String(pr.triggerNum).padStart(2,'0')}</span>
+        <span style="color:var(--text-muted);font-size:10px;margin-left:8px">匹配 ${pr.matchCount} 次</span>
+      </div>`;
+
+      if (pr.matchRecords.length > 0) {
+        // 匹配記錄
+        html += `<div style="margin-bottom:6px">`;
+        html += `<div style="color:var(--text-muted);font-size:10px;margin-bottom:2px">匹配記錄:</div>`;
+        for (const rec of pr.matchRecords) {
+          const fromNums = rec.fromNums.map(n=>String(n).padStart(2,'0')).join(', ');
+          const toNums   = rec.toNums.map(n=>String(n).padStart(2,'0')).join(', ');
+          html += `<div style="font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;padding:1px 0">
+            <span style="color:var(--text-muted)">第${rec.occ}次:</span>
+            ${rec.fromDate} [${fromNums}]
+            <span style="color:var(--text-muted)">→ 下${rec.periodsAhead}期</span>
+            ${rec.toDate} [<span style="color:var(--gold)">${toNums}</span>]
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
+      // 下期號碼出現次數
+      if (pr.filtered.length > 0) {
+        html += `<div style="color:var(--text-muted);font-size:10px;margin-bottom:3px">下期號碼出現次數 (>1)：</div>`;
+        html += `<div style="display:flex;flex-wrap:wrap;gap:4px">`;
+        const maxCnt = Math.max(...pr.filtered.map(f=>f.cnt));
+        for (const { num, cnt } of pr.filtered) {
+          const barLen = cnt;
+          const bar = '█'.repeat(barLen);
+          const alpha = 0.2 + (cnt / maxCnt) * 0.5;
+          html += `<div style="display:flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--border);border-radius:3px;padding:2px 7px;font-size:11px">
+            <span style="color:var(--gold);font-weight:700;font-family:'JetBrains Mono',monospace">${String(num).padStart(2,'0')}</span>
+            <span style="color:var(--text-muted);font-size:10px">${cnt}次</span>
+            <span style="color:rgba(232,160,32,0.9);font-size:9px;letter-spacing:-1px">${bar}</span>
+          </div>`;
+        }
+        html += `</div>`;
+      } else {
+        html += `<div style="color:var(--text-muted);font-size:10px">(沒有號碼出現次數 > 1)</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // ── 號碼主軸統計 ───────────────────────────────────────────
+  // Build by tail order: 1,11,21,31 → 2,12,22,32 → ... → 10,20,30
+  const tailOrder = [];
+  for (let tail = 1; tail <= 10; tail++) {
+    const digit = tail % 10;
+    for (let n = digit === 0 ? 10 : digit; n <= 39; n += 10) tailOrder.push(n);
+  }
+  const numSourceEntries = tailOrder.filter(n => numSourceMap[n]);
+
+  if (numSourceEntries.length > 0) {
+    html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:10px">`;
+    html += `<div style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:600;font-size:12px">號碼主軸統計</div>`;
+    for (const num of numSourceEntries) {
+      const srcMap = numSourceMap[num];
+      let total = 0;
+      for (const k of Object.keys(srcMap)) total += srcMap[k].pairs.length;
+      const bar = '█'.repeat(Math.min(total, 30));
+      const alpha = 0.1 + Math.min(total / maxGlobal, 1) * 0.5;
+
+      html += `<div style="border-bottom:1px solid rgba(255,255,255,0.05);padding:5px 10px">`;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent2);font-size:13px">${String(num).padStart(2,'0')}</span>
+        <span style="color:var(--text-muted);font-size:11px">${total} 次</span>
+        <span style="color:rgba(232,160,32,0.7);font-size:9px;letter-spacing:-1px">${bar}</span>
+      </div>`;
+
+      // Sources sorted by label
+      const keys = Object.keys(srcMap).sort();
+      for (const k of keys) {
+        const { srcLabel, triggerNum, pairs } = srcMap[k];
+        html += `<div style="margin-left:12px;margin-bottom:2px">
+          <span style="color:var(--text-dim);font-size:10px;font-family:'JetBrains Mono',monospace">${srcLabel} 號碼${String(triggerNum).padStart(2,'0')} 來源:</span>
+        </div>`;
+        for (const p of pairs) {
+          const fn = p.fromNums.map(n=>String(n).padStart(2,'0')).join(',');
+          const tn = p.toNums.map(n=>String(n).padStart(2,'0')).join(',');
+          html += `<div style="margin-left:24px;font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;padding:1px 0">
+            當期${p.fromDate}[${fn}]→結果${p.toDate}[<span style="color:var(--gold)">${tn}</span>]
+          </div>`;
+        }
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // ── 全局號碼統計總結 ───────────────────────────────────────
+  if (globalNumsSorted.length > 0) {
+    html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:10px">`;
+    html += `<div style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:600;font-size:12px">全局號碼統計總結</div>`;
+    html += `<div style="padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px">`;
+    for (const { num, cnt } of globalNumsSorted) {
+      const alpha = 0.15 + (cnt / maxGlobal) * 0.65;
+      const bar = '█'.repeat(Math.min(cnt, 20));
+      html += `<div style="background:rgba(72,187,120,${alpha});border:1px solid rgba(72,187,120,0.4);border-radius:3px;padding:2px 8px;font-size:11px;display:flex;align-items:center;gap:5px">
+        <b style="color:#6ee7b7;font-family:'JetBrains Mono',monospace">${String(num).padStart(2,'0')}</b>
+        <span style="color:var(--text-muted);font-size:10px">${cnt}次</span>
+        <span style="color:rgba(72,187,120,0.8);font-size:9px;letter-spacing:-1px">${bar}</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  // ── 全局尾數統計 ───────────────────────────────────────────
+  if (globalTailsSorted.length > 0) {
+    const maxTail = globalTailsSorted[0].cnt;
+    html += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:10px">`;
+    html += `<div style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:600;font-size:12px">全局尾數統計</div>`;
+    html += `<div style="padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px">`;
+    for (const { tail, cnt } of globalTailsSorted) {
+      const alpha = 0.2 + (cnt / maxTail) * 0.6;
+      const bar = '█'.repeat(Math.min(cnt, 30));
+      html += `<div style="background:rgba(155,89,182,${alpha});border:1px solid rgba(155,89,182,0.4);border-radius:3px;padding:2px 10px;font-size:11px;display:flex;align-items:center;gap:5px">
+        <b style="color:#c4b5fd">${tail}尾</b>
+        <span style="color:var(--text-muted);font-size:10px">${cnt}次</span>
+        <span style="color:rgba(155,89,182,0.9);font-size:9px;letter-spacing:-1px">${bar}</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+
+// ============================================================
+// 遺漏表 (tab3) - 對應 C# button_歷史期距_Click + button2_Click
+// ============================================================
+
+// 預計算每一期開獎時各球的遺漏數（開獎前連續缺席幾期）
+// returns missingAt[i][b] = 第i期開獎"時"，球b已連續缺席幾期
+function computeAllMissing() {
+  const N = records.length;
+  const lastSeen = new Int32Array(40).fill(-1); // ball 1..39
+  const missingAt = new Array(N);
+  for (let i = 0; i < N; i++) {
+    const m = new Int16Array(40);
+    for (let b = 1; b <= 39; b++) {
+      m[b] = lastSeen[b] < 0 ? i : (i - lastSeen[b] - 1);
+    }
+    missingAt[i] = m;
+    for (const n of records[i].nums) {
+      if (n >= 1 && n <= 39) lastSeen[n] = i;
+    }
+  }
+  return missingAt;
+}
+
+// 計算 interestedIndex 時刻各球的當前遺漏數（還沒開獎）
+function computeCurrentMissing() {
+  const N = interestedIndex; // only use records[0..N-1]
+  const lastSeen = new Int32Array(40).fill(-1);
+  for (let i = 0; i < N; i++) {
+    for (const n of records[i].nums) {
+      if (n >= 1 && n <= 39) lastSeen[n] = i;
+    }
+  }
+  const m = new Int16Array(40);
+  for (let b = 1; b <= 39; b++) {
+    m[b] = lastSeen[b] < 0 ? N : (N - lastSeen[b] - 1);
+  }
+  return m;
+}
+
+// 產生週開獎格式報表 HTML
+function genWeekReport(flags, title) {
+  const sections = [[1,8],[9,16],[17,24],[25,32],[33,39]];
+  let h = `<div style="margin-bottom:8px">
+    <div style="color:var(--gold);font-weight:600;font-size:11px;margin-bottom:4px">${title}</div>`;
+  for (const [s, e] of sections) {
+    const label = `${String(s).padStart(2,'0')}~${String(e).padStart(2,'0')}`;
+    h += `<div style="display:flex;align-items:center;margin-bottom:2px">
+      <span style="color:var(--text-muted);font-size:10px;min-width:40px;font-family:'JetBrains Mono',monospace">${label}</span>`;
+    for (let i = s; i <= e; i++) {
+      h += flags[i]
+        ? `<span style="min-width:22px;text-align:center;font-size:11px;color:var(--accent2);font-weight:700;font-family:'JetBrains Mono',monospace">${String(i).padStart(2,'0')}</span>`
+        : `<span style="min-width:22px"></span>`;
+    }
+    h += `</div>`;
+  }
+  return h + `</div>`;
+}
+
+function renderMissingTab() {
+  const container = document.getElementById('tab3');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:0">
+      <div style="padding:4px 8px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;color:var(--text-muted)" id="missingStatus">計算中...</div>
+      <div style="flex:1;overflow:auto;min-height:0" id="missingGrid"><div style="color:var(--text-muted);padding:20px;text-align:center">計算中...</div></div>
+      <div style="border-top:1px solid var(--border);overflow-y:auto;padding:8px;max-height:42%;flex-shrink:0" id="missingText"></div>
+    </div>`;
+  container.style.display = 'flex';
+
+  setTimeout(() => {
+    try { buildMissingContent(); }
+    catch(e) { document.getElementById('missingGrid').innerHTML = `<div style="color:#e05252;padding:10px">錯誤: ${e.message}</div>`; }
+  }, 30);
+}
+
+function buildMissingContent() {
+  const N = interestedIndex;
+  if (N < 2) return;
+
+  // ── 預計算所有期的遺漏數 (只用到 interestedIndex 範圍) ──
+  const lastSeen = new Int32Array(40).fill(-1);
+  // missingAt_local[i] = missing at draw i, computed fresh only in range [0..N-1]
+  const missingAt = [];
+  for (let i = 0; i < N; i++) {
+    const m = new Int16Array(40);
+    for (let b = 1; b <= 39; b++) {
+      m[b] = lastSeen[b] < 0 ? i : (i - lastSeen[b] - 1);
+    }
+    missingAt.push(m);
+    for (const n of records[i].nums) {
+      if (n >= 1 && n <= 39) lastSeen[n] = i;
+    }
+  }
+  // currentMissing = missing AFTER all N records (for the text panel)
+  const currentMissing = new Int16Array(40);
+  for (let b = 1; b <= 39; b++) {
+    currentMissing[b] = lastSeen[b] < 0 ? N : (N - lastSeen[b] - 1);
+  }
+
+  const WEEK_CH = ['日','一','二','三','四','五','六'];
+
+  // ── 左側：歷史格 ──
+  const showCount = Math.min(200, N);
+  let gridHtml = `<table style="border-collapse:collapse;font-size:11px;white-space:nowrap;width:100%">
+  <thead><tr style="background:var(--panel2);position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border)">
+    <th style="padding:3px 8px;text-align:left;color:var(--text-dim);min-width:80px;border-right:1px solid var(--border)">日期</th>
+    <th style="padding:3px 5px;text-align:center;color:var(--text-dim);border-right:1px solid var(--border)">周</th>
+    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N1</th>
+    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N2</th>
+    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N3</th>
+    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N4</th>
+    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N5</th>
+    <th style="padding:3px 6px;text-align:center;color:var(--text-dim);border-left:1px solid var(--border)">回</th>
+    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">開</th>
+    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">生</th>
+    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">開</th>
+  </tr></thead><tbody>`;
+
+  // 下期開獎 row
+  gridHtml += `<tr style="background:rgba(58,123,213,0.2);border-bottom:1px solid var(--border)">
+    <td colspan="2" style="padding:3px 8px;color:var(--accent);font-weight:700;font-size:12px">下期開獎</td>
+    <td colspan="9"></td>
+  </tr>`;
+
+  for (let ri = N - 1; ri >= N - showCount; ri--) {
+    const rec = records[ri];
+    const d = new Date(rec.date.replace(/\//g,'-'));
+    const dow = WEEK_CH[d.getDay()];
+    const m = missingAt[ri];
+
+    // 統計 回頭/生牌 for ALL 39 balls at this draw
+    let m_回 = 0, m_生 = 0, m_回開 = 0, m_生開 = 0;
+    for (let b = 1; b <= 39; b++) {
+      const mv = m[b];
+      if (mv <= 5) m_回++;
+      if (mv > 10) m_生++;
+    }
+
+    // 每個開獎球的遺漏數
+    const ballMV = rec.nums.map(n => {
+      const mv = m[n] || 0;
+      if (mv <= 5) m_回開++;
+      if (mv > 10) m_生開++;
+      return mv;
+    });
+
+    // 顏色：0=綠(剛開過), 1-5=暗, 6-10=金, >10=紅
+    const mvColor = mv => mv === 0 ? '#6ee7b7' : mv <= 5 ? 'var(--text-dim)' : mv <= 10 ? 'var(--gold)' : '#e05252';
+    const mvWeight = mv => mv > 10 ? '700' : '400';
+
+    const isEven = (N - 1 - ri) % 2 === 0;
+    gridHtml += `<tr style="${isEven ? '' : 'background:var(--panel2)'}border-bottom:1px solid rgba(255,255,255,0.03)">
+      <td style="padding:2px 8px;color:var(--text-dim);border-right:1px solid var(--border);font-size:11px">${rec.date}</td>
+      <td style="padding:2px 5px;text-align:center;color:var(--text-muted);border-right:1px solid var(--border)">星期${dow}</td>
+      ${ballMV.map(mv => `<td style="padding:2px 8px;text-align:center;color:${mvColor(mv)};font-weight:${mvWeight(mv)}">${mv}</td>`).join('')}
+      <td style="padding:2px 6px;text-align:center;color:var(--text-muted);border-left:1px solid var(--border)">${m_回}</td>
+      <td style="padding:2px 6px;text-align:center;color:var(--text-muted)">${m_回開}</td>
+      <td style="padding:2px 6px;text-align:center;color:${m_生 > 15 ? '#e05252' : 'var(--text-muted)'}">${m_生}</td>
+      <td style="padding:2px 6px;text-align:center;color:${m_生開 > 0 ? '#e05252' : 'var(--text-muted)'}">${m_生開}</td>
+    </tr>`;
+  }
+  gridHtml += `</tbody></table>`;
+  document.getElementById('missingGrid').innerHTML = gridHtml;
+  document.getElementById('missingStatus').textContent =
+    `顯示最近 ${showCount} 期 ｜ 當前基準: ${records[N-1].date}`;
+
+  // ── 右側：遺漏數文字分析 ──
+  // 以 currentMissing 為基準（interestedIndex 時刻，所有39球各自遺漏數）
+  // 對應 C# button2_Click：遍歷 i=0..99，每個 i 找出遺漏數==i 的球
+  const isNextDraw = interestedIndex >= records.length;
+  // 當前期開獎球（如果是下期開獎則無）
+  const drawnSet = (!isNextDraw && interestedIndex < records.length)
+    ? new Set(records[interestedIndex].nums) : new Set();
+
+  let textHtml = `<div style="display:flex;gap:0;height:100%">
+    <div style="flex:1;overflow-y:auto;padding:6px 8px;border-right:1px solid var(--border)">
+      <div style="color:var(--accent2);font-weight:600;font-size:11px;margin-bottom:4px">遺漏數分析</div>`;
+
+  let count = 0;
+  let m_回頭牌數 = 0;
+  const 生牌群 = [];
+
+  for (let i = 0; i <= 60; i++) {
+    const balls = [];
+    for (let b = 1; b <= 39; b++) {
+      if (currentMissing[b] === i) balls.push(b);
+    }
+    if (balls.length === 0) continue;
+
+    const ballsHtml = balls.map(b => {
+      const isDrawn = drawnSet.has(b);
+      return isDrawn
+        ? `<span style="color:var(--gold);font-weight:700">[${b}]</span>`
+        : `<span style="color:var(--text)">${b}</span>`;
+    }).join(' ,');
+
+    textHtml += `<div style="font-size:11px;margin-bottom:1px;line-height:1.5">
+      <span style="color:var(--text-muted);min-width:70px;display:inline-block">遺漏數 ${i} =&gt;</span>${ballsHtml}
+    </div>`;
+
+    count += balls.length;
+    m_回頭牌數 += balls.length;
+    for (const b of balls) if (i > 10) 生牌群.push(b);
+
+    if (i === 5) {
+      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--accent2);font-size:10px;font-weight:600">
+        ── 回頭牌 ${m_回頭牌數} 支 ──</div>`;
+    }
+    if (i === 10) {
+      const remaining = 39 - count;
+      textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--gold);font-size:10px;font-weight:600">
+        ── 生牌=剩下 ${remaining} 支 ──</div>`;
+    }
+  }
+
+  生牌群.sort((a,b)=>a-b);
+  textHtml += `</div>
+    <div style="flex:1;overflow-y:auto;padding:6px 8px">
+      <div style="padding:5px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;font-size:11px;margin-bottom:6px">
+        <div style="color:var(--gold);font-weight:600;margin-bottom:2px">生牌群:</div>
+        <div style="color:var(--text);line-height:1.7">${生牌群.map(b=>String(b).padStart(2,'0')).join(' ,')}</div>
+      </div>`;
+
+  // 週報
+  textHtml += `<div style="display:flex;gap:4px">`;
+
+  // 計算週範圍 (對應 C# isNextDraw 邏輯)
+  const baseRec = records[N-1];
+  const baseDate = new Date(baseRec.date.replace(/\//g,'-'));
+  let lastSundayDate;
+  if (isNextDraw) {
+    const dow2 = baseDate.getDay(); // 0=Sun
+    if (dow2 === 0) lastSundayDate = new Date(baseDate);
+    else { lastSundayDate = new Date(baseDate); lastSundayDate.setDate(lastSundayDate.getDate() - dow2); }
+  } else {
+    let diff = baseDate.getDay();
+    if (diff === 0) diff = 7;
+    lastSundayDate = new Date(baseDate); lastSundayDate.setDate(lastSundayDate.getDate() - diff);
+  }
+  const lwMon = new Date(lastSundayDate); lwMon.setDate(lwMon.getDate()-6);
+  const twMon = new Date(lastSundayDate); twMon.setDate(twMon.getDate()+1);
+  const twEnd = isNextDraw ? baseDate : new Date(baseDate.getTime() - 86400000);
+
+  const lwFlags = new Array(40).fill(false);
+  const twFlags = new Array(40).fill(false);
+  for (let i = 0; i < N; i++) {
+    const d = new Date(records[i].date.replace(/\//g,'-'));
+    if (d >= lwMon && d <= lastSundayDate) for (const n of records[i].nums) if (n>=1&&n<=39) lwFlags[n]=true;
+    if (d >= twMon && d <= twEnd) for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
+  }
+  textHtml += `<div style="flex:1">` + genWeekReport(lwFlags, '上週開獎號') + `</div>`;
+  textHtml += `<div style="flex:1">` + genWeekReport(twFlags, '本週開獎號') + `</div>`;
+  textHtml += `</div></div></div>`;
+
+  document.getElementById('missingText').innerHTML = textHtml;
+}
+
+// ============================================================
+// FULL CALC TRIGGER
+// ============================================================
+function runAllCalc() {
+  renderTailStats();
+  calcBallFreq();
+  const tab1 = document.getElementById('tab1');
+  if (tab1 && tab1.style.display !== 'none') renderVersionTab();
+  const tab2 = document.getElementById('tab2');
+  if (tab2 && tab2.style.display !== 'none') renderObserveTab();
+  const tab3 = document.getElementById('tab3');
+  if (tab3 && tab3.style.display !== 'none') renderMissingTab();
+}
+
+// ============================================================
+// TAB SWITCH
+// ============================================================
+function switchTab(idx) {
+  for (let i=0;i<4;i++) {
+    document.getElementById('tab'+i).style.display = i===idx ? 'flex' : 'none';
+    document.getElementById('tabBtn'+i).classList.toggle('active', i===idx);
+  }
+  if (idx === 1) renderVersionTab();
+  if (idx === 2) renderObserveTab();
+  if (idx === 3) renderMissingTab();
+}
+</script>
+</body>
+</html>
