@@ -296,6 +296,7 @@ function fetchNamedCSV(filename, label) {
 }
 
 
+function loadNamedCSV(input, label, expectedName) {
   if (!input.files[0]) return;
   // 切換按鈕顏色
   document.getElementById('btn539').classList.remove('primary');
@@ -2058,6 +2059,7 @@ function buildMissingText(targetRI) {
   textHtml += `</div></div></div>`;
 
   el.innerHTML = textHtml;
+}
 
 // ============================================================
 // FULL CALC TRIGGER
