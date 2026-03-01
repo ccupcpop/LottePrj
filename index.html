@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>天天539 v1.0</title>
+<title>台灣539 v8.3</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -309,7 +309,9 @@ function reloadCSV() {
 }
 
 function parseCSVText(text, label) {
-  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const MAX_ROWS = 1000;
+  const allLines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const lines = allLines.length > MAX_ROWS ? allLines.slice(allLines.length - MAX_ROWS) : allLines;
     records = [];
     for (const line of lines) {
       const p = line.split(',');
