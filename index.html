@@ -1180,6 +1180,9 @@ function selectVersionBall(ball, col, ri) {
     selectedBall = { ball, col, ri };
   }
   renderVersionTab();
+  // 捲到最底，讓使用者直接看到最新數據
+  const scrollDiv = document.querySelector('#tab1 div[style*="overflow-y:auto"]');
+  if (scrollDiv) scrollDiv.scrollTop = scrollDiv.scrollHeight;
 }
 
 // ============================================================
