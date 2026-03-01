@@ -180,9 +180,9 @@
 
 <div class="app-header">
   <div class="app-title">🎰 台灣539</div>
-  <button class="file-btn primary" id="btn539" onclick="document.getElementById('input539').click()">539</button>
-  <input type="file" id="input539" accept=".csv" style="display:none" onchange="loadNamedCSV(this,'539','tw539.csv')">
-  <button class="file-btn" id="btnTiantian" onclick="fetchNamedCSV('us539.csv','天天')">天天</button>
+  <button class="file-btn primary" id="btn539" onclick="loadCSV('tw539.csv','539')">539</button>
+  <button class="file-btn" id="btnTiantian" onclick="loadCSV('us539.csv','天天')">天天</button>
+  <button class="file-btn" onclick="reloadCSV()" style="margin-left:4px;padding:0 8px;font-size:14px" title="重新載入">🔄</button>
   <div class="status-bar" id="statusBar">請選擇資料</div>
 </div>
 
@@ -284,31 +284,28 @@ document.addEventListener('drop', e => {
   if (f) parseCSVFile(f);
 });
 
-function fetchNamedCSV(filename, label) {
+// 統一載入函數：fetch CSV by filename，不用 file input
+let currentFilename = 'tw539.csv';
+let currentLabel = '539';
+
+function loadCSV(filename, label) {
+  currentFilename = filename;
+  currentLabel = label;
   document.getElementById('btn539').classList.remove('primary');
   document.getElementById('btnTiantian').classList.remove('primary');
-  document.getElementById('btnTiantian').classList.add('primary');
+  if (filename === 'tw539.csv') document.getElementById('btn539').classList.add('primary');
+  else document.getElementById('btnTiantian').classList.add('primary');
   document.getElementById('statusBar').textContent = `載入 ${filename}...`;
-  fetch(filename)
-    .then(r => { if (!r.ok) throw new Error(`找不到 ${filename}`); return r.text(); })
+  fetch(filename + '?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('找不到 ' + filename); return r.text(); })
     .then(text => parseCSVText(text, label))
-    .catch(() => document.getElementById('statusBar').textContent = `❌ 找不到 ${filename}`);
+    .catch(err => {
+      document.getElementById('statusBar').textContent = '❌ ' + err.message;
+    });
 }
 
-
-function loadNamedCSV(input, label, expectedName) {
-  if (!input.files[0]) return;
-  // 切換按鈕顏色
-  document.getElementById('btn539').classList.remove('primary');
-  document.getElementById('btnTiantian').classList.remove('primary');
-  if (expectedName === 'tw539.csv') document.getElementById('btn539').classList.add('primary');
-  else document.getElementById('btnTiantian').classList.add('primary');
-
-  const reader = new FileReader();
-  reader.onload = e => parseCSVText(e.target.result, label);
-  reader.readAsText(input.files[0], 'UTF-8');
-  // 讀完後重置 input 讓同一個檔案可以再次選取
-  input.value = '';
+function reloadCSV() {
+  if (currentFilename) loadCSV(currentFilename, currentLabel);
 }
 
 function parseCSVText(text, label) {
@@ -2089,16 +2086,7 @@ function switchTab(idx) {
 }
 // 頁面啟動自動載入 tw539.csv
 window.addEventListener('DOMContentLoaded', () => {
-  fetch('tw539.csv')
-    .then(r => { if (!r.ok) throw new Error('找不到 tw539.csv'); return r.text(); })
-    .then(text => {
-      parseCSVText(text, '539');
-      document.getElementById('btn539').classList.add('primary');
-      document.getElementById('btnTiantian').classList.remove('primary');
-    })
-    .catch(() => {
-      document.getElementById('statusBar').textContent = '請手動選擇 CSV';
-    });
+  loadCSV('tw539.csv', '539');
 });
 </script>
 </body>
