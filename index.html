@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>台灣539 v8.3</title>
+<title>天天539 v1.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -1493,7 +1493,7 @@ function setObserveMode(mode) {
 function renderObserveTab() {
   const container = document.getElementById('tab2');
   if (!container) return;
-  const posFixed = document.getElementById('observePosFixed')?.checked ?? false;
+  const posFixed = document.getElementById('observePosFixed')?.checked ?? true;
   const mode = observeMode;
   container.innerHTML = buildObserveTabShell(mode, posFixed);
   container.style.display = 'flex';
@@ -2050,9 +2050,9 @@ function buildMissingText(targetRI) {
     if (d >= lwMon && d <= lastSundayDate) for (const n of records[i].nums) if (n>=1&&n<=39) lwFlags[n]=true;
     if (d >= twMon && d <= twEnd)          for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
   }
-  textHtml += `<div style="display:flex;gap:4px">`;
-  textHtml += `<div style="flex:1">` + genWeekReport(lwFlags, '上週開獎號') + `</div>`;
-  textHtml += `<div style="flex:1">` + genWeekReport(twFlags, '本週開獎號') + `</div>`;
+  textHtml += `<div style="display:flex;flex-direction:column;gap:6px">`;
+  textHtml += genWeekReport(lwFlags, '上週開獎號');
+  textHtml += genWeekReport(twFlags, '本週開獎號');
   textHtml += `</div></div></div>`;
 
   el.innerHTML = textHtml;
