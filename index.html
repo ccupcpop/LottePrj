@@ -180,9 +180,11 @@
 
 <div class="app-header">
   <div class="app-title">🎰 台灣539</div>
-  <button class="file-btn primary" onclick="fetchCSV('tw539.csv','539')">539</button>
-  <button class="file-btn" id="btnTiantian" onclick="fetchCSV('us539.csv','天天')">天天</button>
-  <div class="status-bar" id="statusBar">請載入 tw539.csv</div>
+  <button class="file-btn primary" id="btn539" onclick="document.getElementById('input539').click()">539</button>
+  <input type="file" id="input539" accept=".csv" style="display:none" onchange="loadNamedCSV(this,'539','tw539.csv')">
+  <button class="file-btn" id="btnTiantian" onclick="document.getElementById('inputTiantian').click()">天天</button>
+  <input type="file" id="inputTiantian" accept=".csv" style="display:none" onchange="loadNamedCSV(this,'天天','us539.csv')">
+  <div class="status-bar" id="statusBar">請選擇資料</div>
 </div>
 
 <div class="main-layout">
@@ -283,27 +285,19 @@ document.addEventListener('drop', e => {
   if (f) parseCSVFile(f);
 });
 
-function fetchCSV(filename, label) {
-  // Update active button style
-  document.querySelectorAll('.file-btn').forEach(b => b.classList.remove('primary'));
-  const btnMap = {'tw539.csv': 0, 'us539.csv': 1};
-  document.querySelectorAll('.file-btn')[btnMap[filename]]?.classList.add('primary');
+function loadNamedCSV(input, label, expectedName) {
+  if (!input.files[0]) return;
+  // 切換按鈕顏色
+  document.getElementById('btn539').classList.remove('primary');
+  document.getElementById('btnTiantian').classList.remove('primary');
+  if (expectedName === 'tw539.csv') document.getElementById('btn539').classList.add('primary');
+  else document.getElementById('btnTiantian').classList.add('primary');
 
-  document.getElementById('statusBar').textContent = `載入 ${filename}...`;
-  fetch(filename)
-    .then(r => { if (!r.ok) throw new Error(`找不到 ${filename}`); return r.text(); })
-    .then(text => parseCSVText(text, label))
-    .catch(err => {
-      document.getElementById('statusBar').textContent = `❌ ${err.message}`;
-    });
-}
-
-function loadCSV(input) {
-  if (input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => parseCSVText(e.target.result, input.files[0].name);
-    reader.readAsText(input.files[0], 'UTF-8');
-  }
+  const reader = new FileReader();
+  reader.onload = e => parseCSVText(e.target.result, label);
+  reader.readAsText(input.files[0], 'UTF-8');
+  // 讀完後重置 input 讓同一個檔案可以再次選取
+  input.value = '';
 }
 
 function parseCSVText(text, label) {
@@ -1030,8 +1024,8 @@ function renderVersionTab() {
 
   const isPositionFixed = document.getElementById('banluFixedCheck')?.checked ?? false;
 
-  // Display range: last 30 records before interestedIndex
-  const displayCount = Math.min(30, interestedIndex);
+  // Display range: last 120 records before interestedIndex
+  const displayCount = Math.min(120, interestedIndex);
   const startRI = interestedIndex - displayCount; // oldest shown
   const endRI   = interestedIndex - 1;            // newest shown
 
@@ -1828,15 +1822,26 @@ function renderMissingTab() {
   const container = document.getElementById('tab3');
   if (!container) return;
 
-  container.innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%;min-height:0">
-      <div style="padding:4px 8px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;color:var(--text-muted)" id="missingStatus">計算中...</div>
-      <div style="flex:1;overflow:auto;min-height:0" id="missingGrid"><div style="color:var(--text-muted);padding:20px;text-align:center">計算中...</div></div>
-      <div style="border-top:1px solid var(--border);overflow-y:auto;padding:8px;max-height:42%;flex-shrink:0" id="missingText"></div>
-    </div>`;
   container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+
+  // 第一次進入時建立骨架，之後只更新內容
+  if (!document.getElementById('missingGrid')) {
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;height:100%;min-height:0">
+        <div style="padding:4px 8px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;color:var(--text-muted)" id="missingStatus">計算中...</div>
+        <div style="flex:1;overflow:auto;min-height:0" id="missingGrid"></div>
+        <div style="border-top:1px solid var(--border);overflow-y:auto;padding:0;max-height:42%;flex-shrink:0" id="missingText"></div>
+      </div>`;
+  }
+
+  // 捕捉當下 interestedIndex，避免 setTimeout 期間被更改
+  const snapIndex = interestedIndex;
+  document.getElementById('missingStatus').textContent = '計算中...';
 
   setTimeout(() => {
+    // 若期間又切換了，跳過舊的計算
+    if (snapIndex !== interestedIndex) return;
     try { buildMissingContent(); }
     catch(e) { document.getElementById('missingGrid').innerHTML = `<div style="color:#e05252;padding:10px">錯誤: ${e.message}</div>`; }
   }, 30);
@@ -2050,6 +2055,19 @@ function switchTab(idx) {
   if (idx === 2) renderObserveTab();
   if (idx === 3) renderMissingTab();
 }
+// 頁面啟動自動載入 tw539.csv
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('tw539.csv')
+    .then(r => { if (!r.ok) throw new Error('找不到 tw539.csv'); return r.text(); })
+    .then(text => {
+      parseCSVText(text, '539');
+      document.getElementById('btn539').classList.add('primary');
+      document.getElementById('btnTiantian').classList.remove('primary');
+    })
+    .catch(() => {
+      document.getElementById('statusBar').textContent = '請手動選擇 CSV';
+    });
+});
 </script>
 </body>
 </html>
