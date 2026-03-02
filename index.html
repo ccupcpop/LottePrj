@@ -216,13 +216,42 @@
       font-size: 18px !important;
     }
 
-    /* 表格列高加大，方便手指點 */
-    tbody tr { height: 40px; }
-    .ball { width: 26px; height: 26px; font-size: 11px; }
-    td { padding: 2px 1px; }
-    td.seq { font-size: 9px; width: 32px; min-width: 32px; }
-    td.date-cell { font-size: 9px; min-width: 80px; }
-    #mainTable { table-layout: fixed; width: 100%; }
+    /* 手機歷史表格美化 */
+    tbody tr { height: 48px; border-bottom: 1px solid rgba(58,66,96,0.5); }
+    /* 隱藏 seq 欄，省空間 */
+    #mainTable thead th:first-child,
+    #mainTable tbody td.seq { display: none; }
+    /* 日期欄 */
+    td.date-cell {
+      font-size: 12px; padding-left: 6px;
+      color: var(--text); font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+    /* 球變大、圓形 */
+    .ball {
+      width: 32px; height: 32px; font-size: 13px;
+      font-weight: 700; border-radius: 50%;
+    }
+    td { padding: 3px 2px; }
+    #mainTable { table-layout: auto; width: 100%; }
+    /* header 加高加粗 */
+    #mainTable thead th {
+      font-size: 12px; padding: 7px 2px;
+      color: var(--accent2); letter-spacing: 1px;
+      border-bottom: 2px solid var(--border);
+    }
+    /* 奇偶列輕微底色 */
+    #mainTable tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
+    /* 下期開獎 */
+    tbody tr.next-draw {
+      background: rgba(77,143,224,0.12) !important;
+      border-left: 3px solid var(--accent);
+    }
+    /* 選中列 */
+    tbody tr.selected {
+      background: rgba(36,48,96,0.9) !important;
+      border-left: 3px solid var(--accent2);
+    }
   }
 
   /* 桌機/平板：返回按鈕隱藏 */
@@ -1166,7 +1195,7 @@ function renderVersionTab() {
       🔵觸發期　🟢結果期全亮
     </span>
   </div>
-  <div style="overflow-y:auto;flex:1">
+  <div style="overflow-y:auto;flex:1" id="banluScrollDiv">
   <table style="width:100%;border-collapse:collapse;font-size:12px">
     <thead>
       <tr style="background:var(--panel2);position:sticky;top:0;z-index:2">
@@ -1243,7 +1272,43 @@ function renderVersionTab() {
     </tr>`;
   }
 
+  // ── 凍結底部：最新一期 or 下期開獎 ──
+  const frozenRI = interestedIndex - 1; // 最新一期 record index
+  let frozenHtml = '';
+  if (interestedIndex >= records.length) {
+    // 下期還沒開，顯示問號
+    const qball = `<td style="padding:2px 3px;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;font-size:15px;font-weight:900;text-align:center;background:rgba(77,143,224,0.25);color:var(--accent);border:2px dashed var(--accent)">？</span></td>`;
+    frozenHtml = `<tr style="background:rgba(77,143,224,0.18);border-top:2px solid var(--accent)">
+      <td style="padding:4px 6px;color:var(--accent);font-size:11px;font-weight:700;white-space:nowrap">▶ 下期開獎</td>
+      <td style="padding:4px 2px;color:var(--text-muted);font-size:10px"></td>
+      ${qball.repeat(5)}
+    </tr>`;
+  } else if (frozenRI >= 0) {
+    const frec = records[frozenRI];
+    const fd = new Date(frec.date.replace(/\//g,'-'));
+    const fdow = ['日','一','二','三','四','五','六'][fd.getDay()];
+    let fcells = frec.nums.map(n => {
+      let cls = 'background:#3a7bd5;color:#fff';
+      if      (n <= 10) cls = 'background:#2d5a8e;color:#7ab8f5';
+      else if (n <= 20) cls = 'background:#5a2d8e;color:#c4b5fd';
+      else if (n <= 30) cls = 'background:#8e5a2d;color:#fcd34d';
+      else              cls = 'background:#2d8e5a;color:#6ee7b7';
+      return `<td style="padding:2px 3px;text-align:center"><span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:4px;font-size:11px;font-weight:700;text-align:center;${cls}">${pad(n)}</span></td>`;
+    }).join('');
+    frozenHtml = `<tr style="background:rgba(77,143,224,0.15);border-top:2px solid var(--accent)">
+      <td style="padding:4px 6px;color:var(--accent2);font-size:11px;font-weight:700;white-space:nowrap">${frec.date}-${fdow}</td>
+      <td style="padding:4px 2px;color:var(--text-muted);font-size:10px">星期${fdow}</td>
+      ${fcells}
+    </tr>`;
+  }
+
   html += `</tbody></table></div>`;
+  // 凍結底部列
+  html += `<div style="flex-shrink:0;border-top:2px solid var(--accent)">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tbody>${frozenHtml}</tbody>
+    </table>
+  </div>`;
   container.innerHTML = html;
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
