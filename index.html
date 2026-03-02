@@ -1988,10 +1988,10 @@ function renderMissingTab() {
   // 第一次進入時建立骨架，之後只更新內容
   if (!document.getElementById('missingGrid')) {
     container.innerHTML = `
-      <div style="display:flex;flex-direction:column;height:100%;min-height:0">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
         <div style="padding:4px 8px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;color:var(--text-muted)" id="missingStatus">計算中...</div>
         <div style="flex:1;overflow:auto;min-height:0" id="missingGrid"></div>
-        <div style="border-top:1px solid var(--border);overflow-y:auto;padding:0;max-height:42%;flex-shrink:0" id="missingText"></div>
+        <div style="flex:0 0 45%;overflow-y:auto;padding:0;border-top:2px solid var(--border);min-height:0" id="missingText"></div>
       </div>`;
   }
 
