@@ -434,7 +434,7 @@ function parseCSVText(text, label) {
     document.getElementById('rowCount').textContent = `${records.length} 期`;
     renderTable();
     // Auto-select "下期開獎" = interestedIndex = records.length
-    selectByDisplayRow(0);
+    selectByDisplayRow(0, true);
 }
 
 // ============================================================
@@ -510,7 +510,7 @@ function mobileGoBack() {
   document.getElementById('mobileBackBtn').style.display = 'none';
 }
 
-function selectByDisplayRow(di) {
+function selectByDisplayRow(di, noNavigate) {
   selectedDisplayRow = di;
 
   // Update visual selection
@@ -532,8 +532,8 @@ function selectByDisplayRow(di) {
 
   runAllCalc();
 
-  // 手機：點選後自動切換到右側面板
-  mobileGoRight();
+  // 手機：點選後自動切換到右側面板（載入CSV時不跳轉）
+  if (!noNavigate) mobileGoRight();
 }
 
 // ============================================================
