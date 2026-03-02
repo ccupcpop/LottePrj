@@ -1272,8 +1272,9 @@ function renderVersionTab() {
     </tr>`;
   }
 
-  // ── 凍結底部：最新一期 or 下期開獎 ──
-  const frozenRI = interestedIndex - 1; // 最新一期 record index
+  // ── 凍結底部：顯示點選的那一期（interestedIndex）
+  //   若 interestedIndex >= records.length → 下期開獎（問號）
+  //   否則顯示 records[interestedIndex] 的號碼（點選的那期）
   let frozenHtml = '';
   if (interestedIndex >= records.length) {
     // 下期還沒開，顯示問號
@@ -1283,8 +1284,9 @@ function renderVersionTab() {
       <td style="padding:4px 2px;color:var(--text-muted);font-size:10px"></td>
       ${qball.repeat(5)}
     </tr>`;
-  } else if (frozenRI >= 0) {
-    const frec = records[frozenRI];
+  } else {
+    // 顯示點選的那一期（interestedIndex），這是看版路的「目標期」
+    const frec = records[interestedIndex];
     const fd = new Date(frec.date.replace(/\//g,'-'));
     const fdow = ['日','一','二','三','四','五','六'][fd.getDay()];
     let fcells = frec.nums.map(n => {
@@ -1295,8 +1297,8 @@ function renderVersionTab() {
       else              cls = 'background:#2d8e5a;color:#6ee7b7';
       return `<td style="padding:2px 3px;text-align:center"><span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:4px;font-size:11px;font-weight:700;text-align:center;${cls}">${pad(n)}</span></td>`;
     }).join('');
-    frozenHtml = `<tr style="background:rgba(77,143,224,0.15);border-top:2px solid var(--accent)">
-      <td style="padding:4px 6px;color:var(--accent2);font-size:11px;font-weight:700;white-space:nowrap">${frec.date}-${fdow}</td>
+    frozenHtml = `<tr style="background:rgba(0,212,184,0.12);border-top:2px solid var(--accent2)">
+      <td style="padding:4px 6px;color:var(--accent2);font-size:11px;font-weight:700;white-space:nowrap">${frec.date}</td>
       <td style="padding:4px 2px;color:var(--text-muted);font-size:10px">星期${fdow}</td>
       ${fcells}
     </tr>`;
