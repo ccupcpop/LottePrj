@@ -172,6 +172,56 @@
     font-size: 18px; color: var(--accent); font-weight: 700; pointer-events: none;
   }
   .drop-overlay.visible { display: flex; }
+
+  /* ═══════════════════════════════════════════
+     手機版 RWD  (max-width: 600px)
+  ═══════════════════════════════════════════ */
+  @media (max-width: 600px) {
+    /* 手機 header 縮小 */
+    .app-header { height: 42px; padding: 0 8px; gap: 6px; }
+    .app-title { font-size: 10px; }
+    .file-btn { padding: 0 9px; height: 30px; font-size: 11px; }
+    .status-bar { font-size: 9px; }
+
+    /* 手機：左右面板改成全螢幕切換 */
+    .main-layout { position: relative; }
+
+    .left-panel {
+      width: 100% !important;
+      position: absolute; inset: 0;
+      z-index: 10;
+      transition: transform 0.25s ease;
+    }
+    .left-panel.mobile-hidden {
+      transform: translateX(-100%);
+      pointer-events: none;
+    }
+
+    .right-panel {
+      width: 100% !important;
+      position: absolute; inset: 0;
+      z-index: 9;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+    }
+    .right-panel.mobile-visible {
+      transform: translateX(0);
+      z-index: 10;
+    }
+
+    /* 返回按鈕（手機才顯示）*/
+    #mobileBackBtn {
+      display: flex !important;
+    }
+
+    /* 表格列高加大，方便手指點 */
+    tbody tr { height: 40px; }
+    .ball { width: 24px; height: 24px; font-size: 11px; }
+  }
+
+  /* 桌機/平板：返回按鈕隱藏 */
+  #mobileBackBtn { display: none; }
+
 </style>
 </head>
 <body>
@@ -180,6 +230,7 @@
 
 <div class="app-header">
   <div class="app-title">🎰 台灣539</div>
+  <button class="file-btn" id="mobileBackBtn" onclick="mobileGoBack()" style="padding:0 10px;font-size:16px;display:none">◀</button>
   <button class="file-btn primary" id="btn539" onclick="loadCSV('tw539.csv','539')">539</button>
   <button class="file-btn" id="btnTiantian" onclick="loadCSV('us539.csv','天天')">天天</button>
   <button class="file-btn" onclick="reloadCSV()" style="margin-left:4px;padding:0 8px;font-size:14px" title="重新載入">🔄</button>
@@ -404,6 +455,21 @@ function renderTable() {
 
 function pad(n) { return String(n).padStart(2,'0'); }
 
+function isMobile() { return window.innerWidth <= 600; }
+
+function mobileGoRight() {
+  if (!isMobile()) return;
+  document.querySelector('.left-panel').classList.add('mobile-hidden');
+  document.querySelector('.right-panel').classList.add('mobile-visible');
+  document.getElementById('mobileBackBtn').style.display = 'flex';
+}
+
+function mobileGoBack() {
+  document.querySelector('.left-panel').classList.remove('mobile-hidden');
+  document.querySelector('.right-panel').classList.remove('mobile-visible');
+  document.getElementById('mobileBackBtn').style.display = 'none';
+}
+
 function selectByDisplayRow(di) {
   selectedDisplayRow = di;
 
@@ -425,6 +491,9 @@ function selectByDisplayRow(di) {
   if (tab1) tab1._computed = false;
 
   runAllCalc();
+
+  // 手機：點選後自動切換到右側面板
+  mobileGoRight();
 }
 
 // ============================================================
