@@ -2209,27 +2209,28 @@ function _renderMissingText(el, cm, drawnSet, N2, isNextDraw, baseDate, dateLabe
       </div>`;
 
   // 週報
-  let lastSundayDate;
-  if (isNextDraw) {
-    const dow2 = baseDate.getDay();
-    lastSundayDate = new Date(baseDate);
-    if (dow2 !== 0) lastSundayDate.setDate(lastSundayDate.getDate() - dow2);
-  } else {
-    let diff = baseDate.getDay();
-    if (diff === 0) diff = 7;
-    lastSundayDate = new Date(baseDate);
-    lastSundayDate.setDate(lastSundayDate.getDate() - diff);
+  // 找「包含 baseDate 那週」的週日（週一=本週起點，週日=本週終點）
+  // 不論 isNextDraw，邏輯統一：
+  //   baseDate 是週日(0) → lastSunday = baseDate
+  //   baseDate 是週一~週六 → lastSunday = baseDate 往後到當週週日
+  const dow = baseDate.getDay(); // 0=Sunday, 1=Mon ... 6=Sat
+  const lastSundayDate = new Date(baseDate);
+  if (dow !== 0) {
+    // 往後補到週日
+    lastSundayDate.setDate(lastSundayDate.getDate() + (7 - dow));
   }
-  const lwMon = new Date(lastSundayDate); lwMon.setDate(lwMon.getDate()-6);
-  const twMon = new Date(lastSundayDate); twMon.setDate(twMon.getDate()+1);
+  const lwMon = new Date(lastSundayDate); lwMon.setDate(lwMon.getDate()-13); // 上週一
+  const lwSun = new Date(lastSundayDate); lwSun.setDate(lwSun.getDate()-7);  // 上週日
+  const twMon = new Date(lastSundayDate); twMon.setDate(twMon.getDate()-6);  // 本週一
+  // 本週終點：下期開獎用 baseDate，一般點選不含當天（顯示開獎前）
   const twEnd = isNextDraw ? baseDate : new Date(baseDate.getTime() - 86400000);
 
   const lwFlags = new Array(40).fill(false);
   const twFlags = new Array(40).fill(false);
   for (let i = 0; i < N2; i++) {
     const d = new Date(records[i].date.replace(/\//g,'-'));
-    if (d >= lwMon && d <= lastSundayDate) for (const n of records[i].nums) if (n>=1&&n<=39) lwFlags[n]=true;
-    if (d >= twMon && d <= twEnd)          for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
+    if (d >= lwMon && d <= lwSun) for (const n of records[i].nums) if (n>=1&&n<=39) lwFlags[n]=true;
+    if (d >= twMon && d <= twEnd) for (const n of records[i].nums) if (n>=1&&n<=39) twFlags[n]=true;
   }
   textHtml += `<div style="display:flex;flex-direction:column;gap:6px">`;
   textHtml += genWeekReport(lwFlags, '上週開獎號');
