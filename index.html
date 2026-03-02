@@ -8,10 +8,10 @@
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   :root {
-    --bg: #0d0f14; --panel: #13161e; --panel2: #1a1e28; --border: #252b3b;
-    --accent: #3a7bd5; --accent2: #00c2a8; --gold: #e8a020; --red: #e05252;
-    --green: #48bb78; --text: #d0d5e8; --text-muted: #606880; --text-dim: #8890a8;
-    --highlight-row: #1e2535; --selected-row: #1a2a45; --ball-bg: #222840;
+    --bg: #1a1f2e; --panel: #222840; --panel2: #2a3050; --border: #3a4260;
+    --accent: #4d8fe0; --accent2: #00d4b8; --gold: #f0b030; --red: #f06060;
+    --green: #56d68a; --text: #e8ecf8; --text-muted: #8090b0; --text-dim: #a0aac8;
+    --highlight-row: #2a3355; --selected-row: #243060; --ball-bg: #2e3660;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -212,11 +212,17 @@
     /* 返回按鈕（手機才顯示）*/
     #mobileBackBtn {
       display: flex !important;
+      min-width: 64px !important;
+      font-size: 18px !important;
     }
 
     /* 表格列高加大，方便手指點 */
     tbody tr { height: 40px; }
-    .ball { width: 24px; height: 24px; font-size: 11px; }
+    .ball { width: 26px; height: 26px; font-size: 11px; }
+    td { padding: 2px 1px; }
+    td.seq { font-size: 9px; width: 32px; min-width: 32px; }
+    td.date-cell { font-size: 9px; min-width: 80px; }
+    #mainTable { table-layout: fixed; width: 100%; }
   }
 
   /* 桌機/平板：返回按鈕隱藏 */
@@ -229,8 +235,8 @@
 <div class="drop-overlay" id="dropOverlay">放開以載入 CSV</div>
 
 <div class="app-header">
+  <button class="file-btn" id="mobileBackBtn" onclick="mobileGoBack()" style="display:none;min-width:60px;font-size:18px;background:#4d8fe0;border-color:#4d8fe0;color:#fff;font-weight:700">◀</button>
   <div class="app-title">🎰 台灣539</div>
-  <button class="file-btn" id="mobileBackBtn" onclick="mobileGoBack()" style="padding:0 10px;font-size:16px;display:none">◀</button>
   <button class="file-btn primary" id="btn539" onclick="loadCSV('tw539.csv','539')">539</button>
   <button class="file-btn" id="btnTiantian" onclick="loadCSV('us539.csv','天天')">天天</button>
   <button class="file-btn" onclick="reloadCSV()" style="margin-left:4px;padding:0 8px;font-size:14px" title="重新載入">🔄</button>
@@ -247,8 +253,13 @@
       <table id="mainTable">
         <thead>
           <tr>
-            <th style="text-align:left;padding-left:4px">日期</th>
-            <th>N1</th><th>N2</th><th>N3</th><th>N4</th><th>N5</th>
+            <th style="width:32px;min-width:32px"></th>
+            <th style="text-align:left;padding-left:4px;min-width:80px">日期</th>
+            <th style="width:28px">N1</th>
+            <th style="width:28px">N2</th>
+            <th style="width:28px">N3</th>
+            <th style="width:28px">N4</th>
+            <th style="width:28px">N5</th>
           </tr>
         </thead>
         <tbody id="tableBody">
