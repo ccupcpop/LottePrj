@@ -2114,23 +2114,22 @@ function buildMissingText(targetRI) {
   const selRow = document.querySelector(`.missing-row[data-ri="${targetRI}"]`);
   if (selRow) selRow.style.outline = '1px solid var(--accent2)';
 
-  // targetRI 的下一期 = targetRI+1 時刻的遺漏狀況
-  // 對應 C# button2_Click：target_index 那列的 elowValue
-  // 計算截至 targetRI（含）的各球遺漏數
-  const N2 = targetRI + 1; // 用前 N2 筆計算
+  // 點選 targetRI 那列 = 「該期開獎前」的遺漏狀況
+  // 只用 records[0..targetRI-1]（不含當天），這樣才是「該期發生前」的數據
+  const N2 = targetRI; // 不含 targetRI 當天
   const lastSeen2 = new Int32Array(40).fill(-1);
   for (let i = 0; i < N2; i++) {
     for (const n of records[i].nums) if (n >= 1 && n <= 39) lastSeen2[n] = i;
   }
-  const cm = new Int16Array(40); // currentMissing at targetRI
+  const cm = new Int16Array(40);
   for (let b = 1; b <= 39; b++) {
     cm[b] = lastSeen2[b] < 0 ? N2 : (N2 - lastSeen2[b] - 1);
   }
 
-  // 點選的那期開獎球（用於標示 []）
+  // 點選的那期實際開獎球（用 [] 標示命中）
   const drawnSet = new Set(records[targetRI].nums);
 
-  // 判斷是否為「下期開獎」基準（targetRI = interestedIndex-1）
+  // 判斷是否為「下期開獎」基準
   const isNextDraw = (targetRI + 1) >= interestedIndex;
 
   let textHtml = `<div style="display:flex;gap:0;height:100%">
