@@ -2037,17 +2037,17 @@ function buildMissingContent() {
   const showCount = Math.min(200, N);
   let gridHtml = `<table style="border-collapse:collapse;font-size:11px;white-space:nowrap;width:100%">
   <thead><tr style="background:var(--panel2);position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border)">
-    <th style="padding:3px 8px;text-align:left;color:var(--text-dim);min-width:80px;border-right:1px solid var(--border)">日期</th>
-    <th style="padding:3px 5px;text-align:center;color:var(--text-dim);border-right:1px solid var(--border)">周</th>
-    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N1</th>
-    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N2</th>
-    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N3</th>
-    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N4</th>
-    <th style="padding:3px 8px;text-align:center;color:var(--text-dim)">N5</th>
-    <th style="padding:3px 6px;text-align:center;color:var(--text-dim);border-left:1px solid var(--border)">回</th>
-    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">開</th>
-    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">生</th>
-    <th style="padding:3px 6px;text-align:center;color:var(--text-dim)">開</th>
+    <th style="padding:3px 6px;text-align:left;color:var(--text-dim);min-width:72px;border-right:1px solid var(--border)">日期</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim);border-right:1px solid var(--border)">周</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim)">N1</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim)">N2</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim)">N3</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim)">N4</th>
+    <th style="padding:3px 4px;text-align:center;color:var(--text-dim)">N5</th>
+    <th style="padding:3px 3px;text-align:center;color:var(--text-dim);border-left:1px solid var(--border)">回</th>
+    <th style="padding:3px 3px;text-align:center;color:var(--text-dim)">開</th>
+    <th style="padding:3px 3px;text-align:center;color:var(--text-dim)">生</th>
+    <th style="padding:3px 3px;text-align:center;color:var(--text-dim)">開</th>
   </tr></thead><tbody>`;
 
   // 下期開獎 row
@@ -2083,14 +2083,24 @@ function buildMissingContent() {
     const mvWeight = mv => mv > 10 ? '700' : '400';
 
     const isEven = (N - 1 - ri) % 2 === 0;
+    const ballCells = rec.nums.map((n, idx) => {
+      const mv = ballMV[idx];
+      const c = mvColor(mv);
+      return `<td style="padding:1px 2px;text-align:center">
+        <span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.1">
+          <span style="font-size:12px;font-weight:700;color:${c}">${String(n).padStart(2,'0')}</span>
+          <span style="font-size:9px;color:${c};opacity:0.85">(${mv})</span>
+        </span>
+      </td>`;
+    }).join('');
     gridHtml += `<tr data-ri="${ri}" onclick="buildMissingText(${ri})" style="cursor:pointer;${isEven ? '' : 'background:var(--panel2);'}border-bottom:1px solid rgba(255,255,255,0.03)" class="missing-row">
-      <td style="padding:2px 8px;color:var(--text-dim);border-right:1px solid var(--border);font-size:11px">${rec.date}</td>
-      <td style="padding:2px 5px;text-align:center;color:var(--text-muted);border-right:1px solid var(--border)">星期${dow}</td>
-      ${ballMV.map(mv => `<td style="padding:2px 8px;text-align:center;color:${mvColor(mv)};font-weight:${mvWeight(mv)}">${mv}</td>`).join('')}
-      <td style="padding:2px 6px;text-align:center;color:var(--text-muted);border-left:1px solid var(--border)">${m_回}</td>
-      <td style="padding:2px 6px;text-align:center;color:var(--text-muted)">${m_回開}</td>
-      <td style="padding:2px 6px;text-align:center;color:${m_生 > 15 ? '#e05252' : 'var(--text-muted)'}">${m_生}</td>
-      <td style="padding:2px 6px;text-align:center;color:${m_生開 > 0 ? '#e05252' : 'var(--text-muted)'}">${m_生開}</td>
+      <td style="padding:2px 6px;color:var(--text-dim);border-right:1px solid var(--border);font-size:10px">${rec.date}</td>
+      <td style="padding:2px 4px;text-align:center;color:var(--text-muted);border-right:1px solid var(--border);font-size:10px">${dow}</td>
+      ${ballCells}
+      <td style="padding:2px 3px;text-align:center;color:var(--text-muted);border-left:1px solid var(--border);font-size:10px">${m_回}</td>
+      <td style="padding:2px 3px;text-align:center;color:var(--text-muted);font-size:10px">${m_回開}</td>
+      <td style="padding:2px 3px;text-align:center;color:${m_生 > 15 ? '#e05252' : 'var(--text-muted)'};font-size:10px">${m_生}</td>
+      <td style="padding:2px 3px;text-align:center;color:${m_生開 > 0 ? '#e05252' : 'var(--text-muted)'};font-size:10px">${m_生開}</td>
     </tr>`;
   }
   gridHtml += `</tbody></table>`;
