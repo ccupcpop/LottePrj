@@ -1151,7 +1151,7 @@ function renderVersionTab() {
   const container = document.getElementById('tab1');
   if (!container) return;
 
-  const isPositionFixed = document.getElementById('banluFixedCheck')?.checked ?? false;
+  const isPositionFixed = document.getElementById('banluFixedCheck')?.checked ?? true;
 
   // Display range: last 120 records before interestedIndex
   const displayCount = Math.min(120, interestedIndex);
