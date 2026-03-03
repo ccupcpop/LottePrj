@@ -1285,28 +1285,28 @@ function renderVersionTab() {
       const isSameTailCell = !!sameTailCells[cellKey];
       const isSameSumCell  = !!sameSumCells[cellKey];
 
+      // 統一顏色函數：1~9紫 10~19藍 20~29綠 30~39紅
+      function ballColor(n) {
+        if      (n <= 9)  return 'background:#1a0a2e;color:#e879f9;border:2px solid #d946ef';
+        else if (n <= 19) return 'background:#0f1e3a;color:#60a5fa;border:2px solid #3b82f6';
+        else if (n <= 29) return 'background:#0f2e1a;color:#4ade80;border:2px solid #22c55e';
+        else              return 'background:#3a0f0f;color:#f87171;border:2px solid #ef4444';
+      }
+
       let extraStyle = '';
       if (isSelectedCell) {
-        // The clicked cell itself
-        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px;outline:2px solid #fff;outline-offset:1px';
+        // 點選格：同一顏色規則 + 白框標示
+        extraStyle = ballColor(ball) + ';border-radius:5px;outline:2px solid #fff;outline-offset:1px';
       } else if (isTrigger && isPositionFixed && col === selectedBall?.col) {
-        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
+        extraStyle = ballColor(selectedBall.ball) + ';border-radius:5px';
       } else if (isTrigger && !isPositionFixed && records[ri].nums[col] === selectedBall?.ball) {
-        extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
+        extraStyle = ballColor(selectedBall.ball) + ';border-radius:5px';
       } else if (isHit) {
         extraStyle = 'background:#3a2a00;color:#fcd34d;border:2px solid #e8a020;border-radius:5px';
       } else {
-        // 共尾 or 共合數：每個號碼獨立顏色
-        // 顏色表：依號碼值 1~39 分配，同尾數同色
         const _hitNum = isSameTail ? sameTailCells[cellKey] : (isSameSumCell ? sameSumCells[cellKey] : null);
         if (_hitNum && (isSameTail ? isSameTailCell : isSameSumCell)) {
-          // 1~9:紫  10~19:藍  20~29:綠  30~39:紅
-          let _cs;
-          if      (_hitNum <= 9)  _cs = 'background:#1a0a2e;color:#e879f9;border:2px solid #d946ef';
-          else if (_hitNum <= 19) _cs = 'background:#0f1e3a;color:#60a5fa;border:2px solid #3b82f6';
-          else if (_hitNum <= 29) _cs = 'background:#0f2e1a;color:#4ade80;border:2px solid #22c55e';
-          else                    _cs = 'background:#3a0f0f;color:#f87171;border:2px solid #ef4444';
-          extraStyle = _cs + ';border-radius:5px';
+          extraStyle = ballColor(_hitNum) + ';border-radius:5px';
         }
       }
 
