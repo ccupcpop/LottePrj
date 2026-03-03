@@ -1220,14 +1220,8 @@ function renderVersionTab() {
     </thead>
     <tbody>`;
 
-  // Extend display to include hit rows that may fall beyond endRI
-  // (e.g. if gap > 0 and result is interestedIndex itself or beyond)
-  const maxRI = Math.min(records.length - 1, endRI + (selectedBall ? interestedIndex - selectedBall.ri : 0));
-  // But cap at interestedIndex (don't show future)
-  const showEnd = Math.min(records.length - 1, interestedIndex - 1 + (selectedBall ? interestedIndex - selectedBall.ri : 0));
-  // Actually: just show startRI..interestedIndex-1 plus any hitRows that are within records
-  // For simplicity extend to cover all possible result rows
-  const renderEnd = Math.min(records.length - 1, endRI + (selectedBall ? (interestedIndex - selectedBall.ri) : 0));
+  // 表格只顯示到 interestedIndex-1（點選日期凍結在底部，不超出）
+  const renderEnd = endRI; // = interestedIndex - 1
 
   for (let ri = startRI; ri <= renderEnd; ri++) {
     const rec = records[ri];
