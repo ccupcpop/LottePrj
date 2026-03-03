@@ -1315,12 +1315,12 @@ function renderVersionTab() {
   }
 
   html += `</tbody></table></div>`;
-  // 凍結底部列
-  html += `<div style="flex-shrink:0;border-top:2px solid var(--accent)">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <tbody>${frozenHtml}</tbody>
-    </table>
-  </div>`;
+  // 凍結底部列（下期開獎時已在表格內顯示，不重複）
+  if (interestedIndex < records.length) {
+    html += `<div style="flex-shrink:0;border-top:2px solid var(--accent)">`
+      + `<table style="width:100%;border-collapse:collapse;font-size:12px">`
+      + `<tbody>${frozenHtml}</tbody></table></div>`;
+  }
   container.innerHTML = html;
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
