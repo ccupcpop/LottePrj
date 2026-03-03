@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>台灣539 v8.3</title>
+<title>台灣539 v8.9</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   :root {
-    --bg: #1a1f2e; --panel: #222840; --panel2: #2a3050; --border: #3a4260;
-    --accent: #4d8fe0; --accent2: #00d4b8; --gold: #f0b030; --red: #f06060;
-    --green: #56d68a; --text: #e8ecf8; --text-muted: #8090b0; --text-dim: #a0aac8;
-    --highlight-row: #2a3355; --selected-row: #243060; --ball-bg: #2e3660;
+    --bg: #0d1117; --panel: #161b22; --panel2: #21262d; --border: #30363d;
+    --accent: #58a6ff; --accent2: #3fb950; --gold: #f0883e; --red: #f85149;
+    --green: #56d68a; --text: #c9d1d9; --text-muted: #8b949e; --text-dim: #6e7681;
+    --highlight-row: #1f2937; --selected-row: #1a2744; --ball-bg: #21262d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -34,17 +34,19 @@
   /* Header */
   .app-header {
     background: var(--panel); border-bottom: 1px solid var(--border);
-    padding: 0 10px; height: 46px;
-    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 0 12px; height: 50px;
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   }
-  .app-title { font-family: 'JetBrains Mono',monospace; font-size:11px; color:var(--accent); font-weight:600; white-space:nowrap; }
+  .app-title { font-family: 'JetBrains Mono',monospace; font-size:12px; color:var(--accent); font-weight:700; white-space:nowrap; }
   .file-btn {
     background: var(--panel2); border: 1px solid var(--border);
-    color: var(--text); padding: 0 12px; height: 32px; font-size: 12px;
-    cursor: pointer; border-radius: 6px; font-family: 'Noto Sans TC',sans-serif;
+    color: var(--text); padding: 0 14px; height: 36px; font-size: 13px;
+    cursor: pointer; border-radius: 8px; font-family: 'Noto Sans TC',sans-serif;
     white-space: nowrap; display: flex; align-items: center; -webkit-appearance: none;
+    transition: all 0.2s;
   }
-  .file-btn:active { opacity: 0.7; }
+  .file-btn:active { transform: scale(0.94); opacity: 0.8; }
   .file-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .sort-label {
     display: flex; align-items: center; gap: 5px;
@@ -58,16 +60,16 @@
 
   /* Left panel - narrower for tablet */
   .left-panel {
-    width: 38%; flex-shrink: 0;
+    width: 42%; flex-shrink: 0;
     display: flex; flex-direction: column;
     border-right: 1px solid var(--border); background: var(--panel);
   }
   .panel-header {
     background: var(--panel2); border-bottom: 1px solid var(--border);
-    padding: 0 8px; height: 34px;
+    padding: 0 10px; height: 38px;
     display: flex; align-items: center; gap: 6px; flex-shrink: 0;
   }
-  .panel-title { color: var(--text); font-weight: 700; font-size: 12px; }
+  .panel-title { color: var(--text); font-weight: 700; font-size: 13px; }
   .table-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -75,29 +77,34 @@
   table { width: 100%; border-collapse: collapse; }
   thead { position: sticky; top: 0; z-index: 10; }
   thead th {
-    background: var(--panel2); border-bottom: 1px solid var(--border);
-    padding: 4px 2px; color: var(--text-dim); font-size: 10px; text-align: center;
+    background: var(--panel2); border-bottom: 2px solid var(--border);
+    padding: 8px 2px; color: var(--text-muted); font-size: 11px; text-align: center;
+    letter-spacing: 0.05em;
   }
-  tbody tr { border-bottom: 1px solid rgba(37,43,59,0.4); cursor: pointer; height: 34px; }
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); cursor: pointer; height: 42px; transition: background 0.15s; }
   tbody tr:active { background: var(--selected-row); }
-  tbody tr.selected { background: rgba(0,212,184,0.13) !important; }
-  tbody tr.next-draw td { color: var(--accent); font-weight: 700; background: #141a28; }
+  tbody tr.selected { background: rgba(56,139,253,0.12) !important; border-left: 3px solid var(--accent); }
+  tbody tr.next-draw td { color: var(--accent); font-weight: 700; background: transparent !important; }
+  tbody tr.next-draw { background: rgba(88,166,255,0.06); }
+  tbody tr.next-draw.selected { background: rgba(88,166,255,0.22) !important; border-left: 3px solid var(--accent); box-shadow: inset 0 0 0 1px rgba(88,166,255,0.35); }
+  tbody tr.selected td { background: transparent !important; }
   td { padding: 3px 2px; text-align: center; font-family: 'JetBrains Mono',monospace; font-size: 11px; }
   td.seq { color: var(--text-muted); font-size: 10px; }
-  td.date-cell { font-family: 'Noto Sans TC',sans-serif; font-size: 10px; color: var(--text-dim); text-align: left; padding-left: 4px; }
+  td.date-cell { font-family: 'Noto Sans TC',sans-serif; font-size: 11px; color: var(--text-muted); text-align: left; padding-left: 8px; }
 
   .ball {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 50%;
-    font-size: 10px; font-weight: 600; cursor: pointer;
-    background: var(--ball-bg); color: var(--text); border: 1px solid var(--border);
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    background: var(--ball-bg); color: var(--text); border: 1.5px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
-  .ball-1-10  { background: linear-gradient(135deg,#2d5a8e,#1a3a5c); border-color:#3a7bd5; color:#7ab8f5; }
-  .ball-11-20 { background: linear-gradient(135deg,#5a2d8e,#3a1a5c); border-color:#8b5cf6; color:#c4b5fd; }
-  .ball-21-30 { background: linear-gradient(135deg,#8e5a2d,#5c3a1a); border-color:#d97706; color:#fcd34d; }
-  .ball-31-39 { background: linear-gradient(135deg,#2d8e5a,#1a5c3a); border-color:#059669; color:#6ee7b7; }
-  .ball-out   { background: linear-gradient(135deg,#7a2020,#4a1010); border-color:#c02020; color:#f87070; }
-  .ball-selected { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+  .ball-1-10  { background: var(--panel2); border-color:#388efd; color:#58a6ff; }
+  .ball-11-20 { background: var(--panel2); border-color:#8957e5; color:#bc8cff; }
+  .ball-21-30 { background: var(--panel2); border-color:#d29922; color:#f0883e; }
+  .ball-31-39 { background: var(--panel2); border-color:#238636; color:#3fb950; }
+  .ball-out   { background: var(--panel2); border-color:#da3633; color:#f85149; }
+  .ball-selected { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
 
   /* Right panel */
   .right-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -105,16 +112,17 @@
   /* Tab bar */
   .tabs {
     background: var(--panel); border-bottom: 1px solid var(--border);
-    display: flex; flex-shrink: 0; height: 38px; overflow-x: auto; overflow-y: hidden;
+    display: flex; flex-shrink: 0; height: 44px; overflow-x: auto; overflow-y: hidden;
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    padding: 0 16px; font-size: 12px; cursor: pointer;
-    color: var(--text-muted); border-bottom: 2px solid transparent;
+    padding: 0 18px; font-size: 13px; cursor: pointer;
+    color: var(--text-muted); border-bottom: 3px solid transparent;
     white-space: nowrap; display: flex; align-items: center; flex-shrink: 0;
+    transition: color 0.15s;
   }
   .tab:active { background: var(--panel2); }
-  .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); font-weight: 600; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; background: rgba(88,166,255,0.05); }
 
   /* Stats areas */
   .stats-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -260,18 +268,21 @@
       background: rgba(77,143,224,0.1);
       border-left: 3px solid var(--accent);
     }
+    tbody tr.next-draw td { background: transparent !important; }
     /* 選中列（一般歷史期） */
     tbody tr.selected {
       background: rgba(0,212,184,0.13) !important;
       border-left: 3px solid var(--accent2);
       box-shadow: inset 0 0 0 1px rgba(0,212,184,0.2);
     }
+    tbody tr.selected td { background: transparent !important; }
     /* 選中「下期開獎」 */
     tbody tr.next-draw.selected {
-      background: rgba(77,143,224,0.28) !important;
+      background: rgba(77,143,224,0.35) !important;
       border-left: 3px solid var(--accent);
-      box-shadow: inset 0 0 0 1px rgba(77,143,224,0.45);
+      box-shadow: inset 0 0 0 1px rgba(77,143,224,0.6);
     }
+    tbody tr.next-draw.selected td { background: transparent !important; }
   }
 
   /* 桌機/平板：返回按鈕隱藏 */
