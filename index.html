@@ -1152,6 +1152,7 @@ function renderVersionTab() {
   if (!container) return;
 
   const isPositionFixed = document.getElementById('banluFixedCheck')?.checked ?? true;
+  const isSameTail = document.getElementById('banluSameTailCheck')?.checked ?? true;
 
   // Display range: last 120 records before interestedIndex
   const displayCount = Math.min(120, interestedIndex);
@@ -1162,47 +1163,79 @@ function renderVersionTab() {
   // triggerRows[ri] = true  → this row is a trigger (mark the clicked cell blue)
   // hitRows[ri]     = true  → this row is a result row (all 5 balls glow green)
   const triggerRows = {};
-  const hitRows     = {};
+  const hitRows     = {};   // 拖牌用：整行標黃
+  const sameTailCells = {}; // 共尾：格子 key="ri_col"
+  const sameSumCells  = {}; // 共合數：格子 key="ri_col"
 
   if (selectedBall) {
     const { ball, col, ri: clickedRI } = selectedBall;
-    // gap = distance from clicked row to interestedIndex
-    const gap = interestedIndex - clickedRI;
+    const gap = interestedIndex - clickedRI; // 距 interestedIndex 幾期
 
-    // Scan all rows in display range as candidate triggers
-    for (let h = startRI; h <= endRI; h++) {
-      let found = false;
-      if (isPositionFixed) {
-        found = (records[h].nums[col] === ball);
-      } else {
-        found = records[h].nums.includes(ball);
+    if (gap <= 7) {
+      // ── 7天以內：拖牌模式 ──
+      for (let h = startRI; h <= endRI; h++) {
+        let found = false;
+        if (isPositionFixed) {
+          found = (records[h].nums[col] === ball);
+        } else {
+          found = records[h].nums.includes(ball);
+        }
+        if (!found) continue;
+        triggerRows[h] = true;
+        const resultRI = h + gap;
+        if (resultRI <= endRI) {
+          hitRows[resultRI] = true;
+        }
       }
-      if (!found) continue;
+    } else {
+      // ── 7天之外：共尾 & 共合數模式（標記個別格子）──
+      const tail = ball % 10;           // 共尾：個位數
+      // 共合數：數字各位相加 = ball 各位相加，1~39 中符合的號碼集合
+      const ballSum = String(ball).split('').reduce((a,c)=>a+Number(c),0);
+      const sumSet = new Set();
+      for (let n = 1; n <= 39; n++) {
+        if (String(n).split('').reduce((a,c)=>a+Number(c),0) === ballSum) sumSet.add(n);
+      }
 
-      triggerRows[h] = true;
-
-      // The result row is h + gap
-      const resultRI = h + gap;
-      if (resultRI < records.length) {
-        hitRows[resultRI] = true;
+      for (let h = startRI; h <= endRI; h++) {
+        for (let c = 0; c < DEFINE_NUMBER; c++) {
+          const n = records[h].nums[c];
+          const key = h + '_' + c;
+          if (n % 10 === tail && n !== ball) {
+            sameTailCells[key] = n;  // 共尾：存號碼值
+          }
+          if (sumSet.has(n) && n !== ball) {
+            sameSumCells[key] = n;   // 共合數：存號碼值
+          }
+        }
       }
     }
   }
 
   // --- Build HTML ---
   const WEEK_CH2 = ['日','一','二','三','四','五','六'];
-  const selInfo = selectedBall
-    ? `號碼 <b style="color:var(--gold)">${pad(selectedBall.ball)}</b>　位置 N${selectedBall.col+1}　往後 <b style="color:var(--accent2)">${interestedIndex - selectedBall.ri}</b> 期`
-    : '點擊下方表格中的號碼開始分析';
+  let selInfo = '點擊下方表格中的號碼開始分析';
+  if (selectedBall) {
+    const _gap = interestedIndex - selectedBall.ri;
+    if (_gap <= 7) {
+      selInfo = `號碼 <b style="color:var(--gold)">${pad(selectedBall.ball)}</b>　位置 N${selectedBall.col+1}　往後 <b style="color:var(--accent2)">${_gap}</b> 期　<span style="color:var(--text-muted);font-size:10px">（拖牌）</span>`;
+    } else {
+      const _mode = isSameTail ? `共尾 <b style="color:var(--accent)">${selectedBall.ball % 10}</b>` : `共合數 <b style="color:var(--accent)">${pad(selectedBall.ball)}</b>`;
+      selInfo = `號碼 <b style="color:var(--gold)">${pad(selectedBall.ball)}</b>　${_mode}　<span style="color:var(--text-muted);font-size:10px">（${_gap}期前）</span>`;
+    }
+  }
 
   let html = `
   <div style="display:flex;align-items:center;gap:12px;padding:6px 10px;background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap">
     <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:5px">
       <input type="checkbox" id="banluFixedCheck" ${isPositionFixed?'checked':''} onchange="renderVersionTab()"> 定位
     </label>
+    <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:5px">
+      <input type="checkbox" id="banluSameTailCheck" ${isSameTail?'checked':''} onchange="renderVersionTab()"> 共尾
+    </label>
     <span style="font-size:12px;color:var(--text)">${selInfo}</span>
     <span style="font-size:11px;color:var(--text-muted);margin-left:auto">
-      🔵觸發期　🟢結果期全亮
+      ${selectedBall && (interestedIndex - selectedBall.ri) <= 7 ? '🔵觸發期　🟡結果期' : selectedBall ? '🟢共尾　🟠共合數　🟣兩者皆符' : ''}
     </span>
   </div>
   <div style="overflow-y:auto;flex:1" id="banluScrollDiv">
@@ -1244,19 +1277,68 @@ function renderVersionTab() {
       const ball = rec.nums[col];
       const isSelectedCell = selectedBall && ri === selectedBall.ri && col === selectedBall.col;
 
+      const cellKey = ri + '_' + col;
+      const isSameTailCell = !!sameTailCells[cellKey];
+      const isSameSumCell  = !!sameSumCells[cellKey];
+
       let extraStyle = '';
       if (isSelectedCell) {
         // The clicked cell itself
         extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px;outline:2px solid #fff;outline-offset:1px';
       } else if (isTrigger && isPositionFixed && col === selectedBall?.col) {
-        // Trigger cell (same position, 定位)
         extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
       } else if (isTrigger && !isPositionFixed && records[ri].nums[col] === selectedBall?.ball) {
-        // Trigger cell (any position with matching ball, 不定位)
         extraStyle = 'background:#1a3a6b;color:#64b3f4;border:2px solid #3a7bd5;border-radius:5px';
       } else if (isHit) {
-        // Result row: all 5 balls glow yellow/gold
         extraStyle = 'background:#3a2a00;color:#fcd34d;border:2px solid #e8a020;border-radius:5px';
+      } else {
+        // 共尾 or 共合數：每個號碼獨立顏色
+        // 顏色表：依號碼值 1~39 分配，同尾數同色
+        const _numPalette = {
+          1:  'background:#0f1e3a;color:#93c5fd;border:2px solid #3b82f6',
+          11: 'background:#1a2a4a;color:#60a5fa;border:2px solid #2563eb',
+          21: 'background:#0a1a3a;color:#bfdbfe;border:2px solid #1d4ed8',
+          31: 'background:#061030;color:#dbeafe;border:2px solid #1e40af',
+          2:  'background:#0f2e1a;color:#86efac;border:2px solid #22c55e',
+          12: 'background:#1a3a1a;color:#4ade80;border:2px solid #16a34a',
+          22: 'background:#0a2a0a;color:#bbf7d0;border:2px solid #15803d',
+          32: 'background:#062006;color:#dcfce7;border:2px solid #166534',
+          3:  'background:#3a0f0f;color:#fca5a5;border:2px solid #ef4444',
+          13: 'background:#3a1a1a;color:#f87171;border:2px solid #dc2626',
+          23: 'background:#2a0a0a;color:#fecaca;border:2px solid #b91c1c',
+          33: 'background:#200606;color:#fee2e2;border:2px solid #991b1b',
+          4:  'background:#2e200a;color:#fcd34d;border:2px solid #f59e0b',
+          14: 'background:#3a2a00;color:#fbbf24;border:2px solid #d97706',
+          24: 'background:#2a1a00;color:#fde68a;border:2px solid #b45309',
+          34: 'background:#1a1000;color:#fef3c7;border:2px solid #92400e',
+          5:  'background:#1e0f3a;color:#d8b4fe;border:2px solid #a855f7',
+          15: 'background:#2a1a3a;color:#c084fc;border:2px solid #9333ea',
+          25: 'background:#200a2a;color:#e9d5ff;border:2px solid #7e22ce',
+          35: 'background:#160620;color:#f3e8ff;border:2px solid #6b21a8',
+          6:  'background:#00282e;color:#5eead4;border:2px solid #14b8a6',
+          16: 'background:#003a3a;color:#2dd4bf;border:2px solid #0d9488',
+          26: 'background:#002a2a;color:#99f6e4;border:2px solid #0f766e',
+          36: 'background:#001e1e;color:#ccfbf1;border:2px solid #115e59',
+          7:  'background:#3a0f20;color:#fda4af;border:2px solid #f43f5e',
+          17: 'background:#3a1a2a;color:#f472b6;border:2px solid #ec4899',
+          27: 'background:#2a0a1a;color:#fbcfe8;border:2px solid #db2777',
+          37: 'background:#200610;color:#fce7f3;border:2px solid #be185d',
+          8:  'background:#0f2e1e;color:#6ee7b7;border:2px solid #10b981',
+          18: 'background:#1a3a2a;color:#34d399;border:2px solid #059669',
+          28: 'background:#0a2a1a;color:#a7f3d0;border:2px solid #047857',
+          38: 'background:#062018;color:#d1fae5;border:2px solid #065f46',
+          9:  'background:#2e2a00;color:#fef08a;border:2px solid #eab308',
+          19: 'background:#2a2a00;color:#fde047;border:2px solid #ca8a04',
+          29: 'background:#1a1a00;color:#fef9c3;border:2px solid #a16207',
+          39: 'background:#101000;color:#fefce8;border:2px solid #854d0e',
+          10: 'background:#002a3a;color:#7dd3fc;border:2px solid #38bdf8',
+          20: 'background:#001e2e;color:#bae6fd;border:2px solid #0284c7',
+          30: 'background:#00121e;color:#e0f2fe;border:2px solid #0369a1',
+        };
+        const _hitNum = isSameTail ? sameTailCells[cellKey] : (isSameSumCell ? sameSumCells[cellKey] : null);
+        if (_hitNum && (isSameTail ? isSameTailCell : isSameSumCell)) {
+          extraStyle = (_numPalette[_hitNum] || 'background:#2a2a2a;color:#aaa;border:2px solid #666') + ';border-radius:5px';
+        }
       }
 
       html += `<td style="padding:2px 3px;text-align:center">
