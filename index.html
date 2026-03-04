@@ -2337,21 +2337,22 @@ function _renderMissingText(el, cm, drawnSet, N2, isNextDraw, baseDate, dateLabe
     for (let b = 1; b <= 39; b++) {
       if (cm[b] === i) balls.push(b);
     }
-    if (balls.length === 0) continue;
 
-    const ballsHtml = balls.map(b => {
-      return drawnSet.has(b)
-        ? `<span style="color:var(--gold);font-weight:700">[${b}]</span>`
-        : `<span style="color:var(--text)">${b}</span>`;
-    }).join(' ,');
+    if (balls.length > 0) {
+      const ballsHtml = balls.map(b => {
+        return drawnSet.has(b)
+          ? `<span style="color:var(--gold);font-weight:700">[${b}]</span>`
+          : `<span style="color:var(--text)">${b}</span>`;
+      }).join(' ,');
 
-    textHtml += `<div style="font-size:11px;margin-bottom:1px;line-height:1.5">
-      <span style="color:var(--text-muted);min-width:70px;display:inline-block">遺漏數 ${i} =&gt;</span>${ballsHtml}
-    </div>`;
+      textHtml += `<div style="font-size:11px;margin-bottom:1px;line-height:1.5">
+        <span style="color:var(--text-muted);min-width:70px;display:inline-block">遺漏數 ${i} =&gt;</span>${ballsHtml}
+      </div>`;
 
-    count += balls.length;
-    m_回頭牌數 += balls.length;
-    for (const b of balls) if (i > 10) 生牌群.push(b);
+      count += balls.length;
+      m_回頭牌數 += balls.length;
+      for (const b of balls) if (i > 10) 生牌群.push(b);
+    }
 
     if (i === 5) {
       textHtml += `<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:3px;color:var(--accent2);font-size:10px;font-weight:600">── 回頭牌 ${m_回頭牌數} 支 ──</div>`;
