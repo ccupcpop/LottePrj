@@ -60,7 +60,7 @@
 
   /* Left panel - narrower for tablet */
   .left-panel {
-    width: 42%; flex-shrink: 0;
+    width: 45%; flex-shrink: 0;
     display: flex; flex-direction: column;
     border-right: 1px solid var(--border); background: var(--panel);
   }
@@ -317,17 +317,17 @@
   /* 嚴格對齊網格：col尾 | 分隔 | 個位 | 十位 | 廿位 | 卅位 */
   .bp-grid-wrap {
     display:grid;
-    grid-template-columns: 26px 6px 26px 26px 26px 26px;
-    row-gap:4px;
-    column-gap:3px;
-    padding:5px 8px;
+    grid-template-columns: 36px 8px 36px 36px 36px 36px;
+    row-gap:7px;
+    column-gap:5px;
+    padding:8px 10px;
     align-items:center;
     justify-items:center;
   }
   .bp-ball, .bp-tail-btn {
     display:flex;align-items:center;justify-content:center;
-    width:24px;height:24px;border-radius:50%;
-    font-size:10px;font-weight:700;
+    width:34px;height:34px;border-radius:50%;
+    font-size:13px;font-weight:700;
     cursor:pointer;user-select:none;
     transition:transform 0.1s,box-shadow 0.12s,background 0.12s;
   }
@@ -350,7 +350,7 @@
     border-color:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.4);
   }
   .bp-col-header {
-    font-size:9px;color:rgba(255,255,255,0.2);text-align:center;
+    font-size:11px;color:rgba(255,255,255,0.25);text-align:center;
     font-weight:600;line-height:1;
   }
 </style>
