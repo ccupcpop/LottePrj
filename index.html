@@ -1284,11 +1284,7 @@ function renderVersionTab() {
         triggerRows[h] = true;
         const resultRI = h + gap;
         if (resultRI <= endRI) {
-          // 結果行（大於點選行）若任意位置含相同號碼，則不標示
-          const resNums = records[resultRI].nums;
-          if (!resNums.includes(ball)) {
-            hitRows[resultRI] = true;
-          }
+          hitRows[resultRI] = true;
         }
       }
     } else {
