@@ -2113,16 +2113,16 @@ function computeCurrentMissing() {
 // 產生週開獎格式報表 HTML
 function genWeekReport(flags, title) {
   const sections = [[1,8],[9,16],[17,24],[25,32],[33,39]];
-  let h = `<div style="margin-bottom:8px">
-    <div style="color:var(--gold);font-weight:600;font-size:11px;margin-bottom:4px">${title}</div>`;
+  let h = `<div style="margin-bottom:4px">
+    <div style="color:var(--gold);font-weight:600;font-size:11px;margin-bottom:2px">${title}</div>`;
   for (const [s, e] of sections) {
     const label = `${String(s).padStart(2,'0')}~${String(e).padStart(2,'0')}`;
-    h += `<div style="display:flex;align-items:center;margin-bottom:2px">
-      <span style="color:var(--text-muted);font-size:10px;min-width:40px;font-family:'JetBrains Mono',monospace">${label}</span>`;
+    h += `<div style="display:flex;align-items:center;margin-bottom:1px">
+      <span style="color:var(--text-muted);font-size:10px;min-width:36px;font-family:'JetBrains Mono',monospace">${label}</span>`;
     for (let i = s; i <= e; i++) {
       h += flags[i]
-        ? `<span style="min-width:22px;text-align:center;font-size:11px;color:var(--accent2);font-weight:700;font-family:'JetBrains Mono',monospace">${String(i).padStart(2,'0')}</span>`
-        : `<span style="min-width:22px"></span>`;
+        ? `<span style="min-width:18px;text-align:center;font-size:11px;color:var(--accent2);font-weight:700;font-family:'JetBrains Mono',monospace">${String(i).padStart(2,'0')}</span>`
+        : `<span style="min-width:18px"></span>`;
     }
     h += `</div>`;
   }
